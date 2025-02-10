@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GIDWANROCK ENTERPRISE</title>
+    <link rel="stylesheet" href="styles.css">
+    <meta name="theme-color" content="#1a237e">
+    <meta name="msapplication-navbutton-color" content="#1a237e">
+    <meta name="apple-mobile-web-app-status-bar-style" content="#1a237e">
+</head>
+<body>
+    <!-- Add Company Header -->
+    <header class="company-header">
+        <div class="company-branding">
+            <div class="logo-section">
+                <img src="images/loganb.png" alt="Company Logo" class="company-logo">
+                <div class="company-info">
+                    <h1 class="company-name">GIDWANROCK ENTERPRISE</h1>
+                    <p class="company-slogan">Pslam 23 "Nyame ne hene"</p>
+                </div>
+            </div>
+           
+    </header>
+
+    <!-- Update login container with company branding -->
+    <div class="login-container" id="loginForm">
+        <div class="login-header">
+            <img src="images/loganb.png" alt="Company Logo" class="login-logo">
+            <h2>Welcome Back</h2>
+            <p class="login-subtitle">Please login to continue</p>
+        </div>
+        <div class="login-form">
+            <input type="text" id="username" placeholder="Username">
+            <input type="password" id="password" placeholder="Password">
+            <button onclick="login()">Login</button>
+        </div>
+    </div>
+
+    <div class="dashboard" id="adminDashboard" style="display: none;">
+        <div class="dashboard-header">
+            <h2>Admin Dashboard</h2>
+            <span class="user-info">Welcome, Admin</span>
+        </div>
+        <nav>
+            <button onclick="showSection('addStock')">Add Stock</button>
+            <button onclick="showSection('categories')">Categories</button>
+            <button onclick="showSection('reports')">Reports</button>
+            <button onclick="showSection('viewStock')">View Stock</button>
+            <button onclick="logout()">Logout</button>
+        </nav>
+
+        <div id="addStock" class="section">
+            <h3>Add Stock</h3>
+            <div class="form-group">
+                <input type="text" id="productName" placeholder="Product Name">
+                <input type="number" id="quantity" placeholder="Quantity">
+                <input type="number" id="price" placeholder="Price">
+                <select id="categorySelect"></select>
+                
+                <div class="image-upload">
+                    <input type="file" id="productImage" accept="image/*" onchange="previewImage(event)">
+                    <label for="productImage" class="upload-label">Choose Product Image</label>
+                    <div id="imagePreview"></div>
+                </div>
+                
+                <button onclick="addStock()">Add Stock</button>
+            </div>
+        </div>
+
+        <div id="categories" class="section">
+            <h3>Categories</h3>
+            <input type="text" id="categoryName" placeholder="Category Name">
+            <button onclick="addCategory()">Add Category</button>
+            <ul id="categoryList"></ul>
+        </div>
+
+        <div id="reports" class="section">
+            <h3>Sales Reports</h3>
+            
+            <div class="report-controls">
+                <div class="date-filters">
+                    <select id="reportType" onchange="generateReport()">
+                        <option value="daily">Daily Report</option>
+                        <option value="weekly">Weekly Report</option>
+                        <option value="monthly">Monthly Report</option>
+                        <option value="yearly">Yearly Report</option>
+                    </select>
+                    
+                    <input type="date" id="startDate" onchange="generateReport()">
+                    <input type="date" id="endDate" onchange="generateReport()">
+                </div>
+                
+                <div class="report-actions">
+                    <button onclick="exportReport()" class="export-btn">
+                        <i class="fas fa-download"></i> Export Report
+                    </button>
+                    <button onclick="printReport()" class="print-btn">
+                        <i class="fas fa-print"></i> Print Report
+                    </button>
+                </div>
+            </div>
+
+            <div class="report-summary">
+                <div class="summary-card">
+                    <h4>Total Sales</h4>
+                    <p id="totalSales">GH₵ 0.00</p>
+                </div>
+                <div class="summary-card">
+                    <h4>Items Sold</h4>
+                    <p id="itemsSold">0</p>
+                </div>
+                <div class="summary-card">
+                    <h4>Transactions</h4>
+                    <p id="totalTransactions">0</p>
+                </div>
+            </div>
+
+            <div class="report-charts">
+                <canvas id="salesChart"></canvas>
+            </div>
+
+            <div class="report-table">
+                <table id="reportTable">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Invoice #</th>
+                            <th>Customer</th>
+                            <th>Phone</th>
+                            <th>Items</th>
+                            <th>Total</th>
+                            <th>Employee</th>
+                        </tr>
+                    </thead>
+                    <tbody id="reportData"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="viewStock" class="section">
+            <h3>Available Stock</h3>
+            <div class="stock-controls">
+                <input type="text" id="stockSearch" placeholder="Search stocks..." onkeyup="searchStock()">
+                <select id="filterCategory" onchange="filterStock()">
+                    <option value="">All Categories</option>
+                </select>
+            </div>
+            <table id="stockTable">
+                <thead>
+                    <tr>
+                        <th>Image</th>
+                        <th>Product</th>
+                        <th>Category</th>
+                        <th>Quantity</th>
+                        <th>Price (GH₵)</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="stockList"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="dashboard" id="employeeDashboard" style="display: none;">
+        <div class="dashboard-header">
+            <h2>Employee Dashboard</h2>
+            <span class="user-info">Welcome, Employee</span>
+        </div>
+        <nav>
+            <button onclick="showSection('sell')">New Sale</button>
+            <button onclick="showSection('salesHistory')">Sales History</button>
+            <button onclick="logout()">Logout</button>
+        </nav>
+
+        <div id="sell" class="section">
+            <h3>New Sale</h3>
+            
+            <!-- Customer Information Form -->
+            <div class="customer-info-form">
+                <h4>Customer Details</h4>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="customerName">Customer Name*</label>
+                        <input type="text" id="customerName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="customerPhone">Phone Number</label>
+                        <input type="tel" id="customerPhone" pattern="[0-9]{10}">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Shopping Cart -->
+            <div class="shopping-cart">
+                <h4>Add Products</h4>
+                <div class="product-selection">
+                    <select id="productSelect" onchange="updateUnitPrice()">
+                        <option value="">Select a product...</option>
+                    </select>
+                    <input type="number" id="sellQuantity" min="1" value="1" placeholder="Quantity">
+                    <button onclick="addToCart()" class="add-to-cart-btn">Add to Cart</button>
+                </div>
+
+                <div class="cart-container">
+                    <h4>Shopping Cart</h4>
+                    <table id="cartTable">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th>Quantity</th>
+                                <th>Unit Price</th>
+                                <th>Total</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cartItems"></tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="3"><strong>Total Amount:</strong></td>
+                                <td id="cartTotal">GH₵ 0.00</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+
+                    <div class="cart-actions">
+                        <button onclick="clearCart()" class="clear-cart-btn">Clear Cart</button>
+                        <button onclick="completeSale()" class="complete-sale-btn">Complete Sale</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sales History Section -->
+        <div id="salesHistory" class="section">
+            <h3>Sales History</h3>
+            <div class="sales-filters">
+                <input type="date" id="salesDate" onchange="filterSales()">
+                <input type="text" id="searchCustomer" placeholder="Search customer..." onkeyup="filterSales()">
+            </div>
+            <table id="salesHistoryTable">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Invoice #</th>
+                        <th>Customer</th>
+                        <th>Phone</th>
+                        <th>Items</th>
+                        <th>Total</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="salesHistoryData"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Add Modal for Editing Stock -->
+    <div id="editStockModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h3>Edit Stock</h3>
+            <form id="editStockForm">
+                <input type="hidden" id="editItemId">
+                <div class="form-group">
+                    <label>Product Name</label>
+                    <input type="text" id="editProductName" required>
+                </div>
+                <div class="form-group">
+                    <label>Category</label>
+                    <select id="editCategorySelect" required></select>
+                </div>
+                <div class="form-group">
+                    <label>Quantity</label>
+                    <input type="number" id="editQuantity" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label>Price (GH₵)</label>
+                    <input type="number" id="editPrice" min="0" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label>Product Image</label>
+                    <input type="file" id="editProductImage" accept="image/*">
+                    <div id="editImagePreview"></div>
+                </div>
+                <div class="modal-buttons">
+                    <button type="submit" class="save-btn">Save Changes</button>
+                    <button type="button" class="cancel-btn">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html> 
