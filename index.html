@@ -47,16 +47,40 @@
             <button onclick="showSection('categories')">Categories</button>
             <button onclick="showSection('reports')">Reports</button>
             <button onclick="showSection('viewStock')">View Stock</button>
+            <button onclick="showSection('userManagement')">User Management</button>
+            <button onclick="showSection('employeeManagement')">Employee Management</button>
             <button onclick="logout()">Logout</button>
         </nav>
 
         <div id="addStock" class="section">
-            <h3>Add Stock</h3>
-            <div class="form-group">
-                <input type="text" id="productName" placeholder="Product Name">
-                <input type="number" id="quantity" placeholder="Quantity">
-                <input type="number" id="price" placeholder="Price">
-                <select id="categorySelect"></select>
+            <h3>Add New Stock</h3>
+            <form id="stockForm">
+                <div class="form-group">
+                    <label for="productName">Product Name*</label>
+                    <input type="text" id="productName" required>
+                </div>
+                <div class="form-group">
+                    <label for="quantity">Quantity*</label>
+                    <input type="number" id="quantity" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label for="cost">Cost Price (GH₵)*</label>
+                    <input type="number" id="cost" min="0" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label for="price">Selling Price (GH₵)*</label>
+                    <input type="number" id="price" min="0" step="0.01" required>
+                </div>
+                <div class="profit-preview">
+                    <span>Profit Margin: </span>
+                    <span id="profitMargin">0%</span>
+                </div>
+                <div class="form-group">
+                    <label for="categorySelect">Category</label>
+                    <select id="categorySelect" required>
+                        <option value="">Select a category</option>
+                    </select>
+                </div>
                 
                 <div class="image-upload">
                     <input type="file" id="productImage" accept="image/*" onchange="previewImage(event)">
@@ -65,7 +89,7 @@
                 </div>
                 
                 <button onclick="addStock()">Add Stock</button>
-            </div>
+            </form>
         </div>
 
         <div id="categories" class="section">
@@ -116,6 +140,25 @@
                 </div>
             </div>
 
+            <div class="profit-summary-cards">
+                <div class="summary-card">
+                    <h4>Total Revenue</h4>
+                    <p id="totalRevenue">GH₵ 0.00</p>
+                </div>
+                <div class="summary-card">
+                    <h4>Total Cost</h4>
+                    <p id="totalCost">GH₵ 0.00</p>
+                </div>
+                <div class="summary-card">
+                    <h4>Total Profit</h4>
+                    <p id="totalProfit">GH₵ 0.00</p>
+                </div>
+                <div class="summary-card">
+                    <h4>Profit Margin</h4>
+                    <p id="profitMarginTotal">0%</p>
+                </div>
+            </div>
+
             <div class="report-charts">
                 <canvas id="salesChart"></canvas>
             </div>
@@ -160,6 +203,71 @@
                 <tbody id="stockList"></tbody>
             </table>
         </div>
+
+        <div id="userManagement" class="section">
+            <h3>User Management</h3>
+            
+            <div class="user-management-container">
+                <table id="userTable">
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Role</th>
+                            <th>Last Login</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="userList"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="employeeManagement" class="section">
+            <h3>Employee Management</h3>
+            
+            <div class="employee-controls">
+                <button onclick="openAddEmployeeModal()" class="add-employee-btn">
+                    <i class="fas fa-plus"></i> Add New Employee
+                </button>
+            </div>
+
+            <div class="employee-list-container">
+                <table id="employeeTable">
+                    <thead>
+                        <tr>
+                            <th>Employee ID</th>
+                            <th>Full Name</th>
+                            <th>Username</th>
+                            <th>Contact</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="employeeList"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="categoryManagement" class="section">
+            <h3>Category Management</h3>
+            
+            <div class="category-form">
+                <div class="input-group">
+                    <input type="text" id="newCategory" placeholder="Enter new category name">
+                    <button onclick="addCategory()" class="add-btn">
+                        <i class="fas fa-plus"></i> Add Category
+                    </button>
+                </div>
+            </div>
+
+            <div class="category-container">
+                <h4>Current Categories</h4>
+                <div id="categoryList" class="category-list">
+                    <!-- Categories will be listed here -->
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="dashboard" id="employeeDashboard" style="display: none;">
@@ -176,7 +284,6 @@
         <div id="sell" class="section">
             <h3>New Sale</h3>
             
-            <!-- Customer Information Form -->
             <div class="customer-info-form">
                 <h4>Customer Details</h4>
                 <div class="form-row">
@@ -191,19 +298,17 @@
                 </div>
             </div>
 
-            <!-- Shopping Cart -->
             <div class="shopping-cart">
                 <h4>Add Products</h4>
                 <div class="product-selection">
                     <select id="productSelect" onchange="updateUnitPrice()">
                         <option value="">Select a product...</option>
                     </select>
-                    <input type="number" id="sellQuantity" min="1" value="1" placeholder="Quantity">
+                    <input type="number" id="sellQuantity" min="1" value="1">
                     <button onclick="addToCart()" class="add-to-cart-btn">Add to Cart</button>
                 </div>
 
                 <div class="cart-container">
-                    <h4>Shopping Cart</h4>
                     <table id="cartTable">
                         <thead>
                             <tr>
@@ -243,12 +348,9 @@
                 <thead>
                     <tr>
                         <th>Date</th>
-                        <th>Invoice #</th>
                         <th>Customer</th>
-                        <th>Phone</th>
-                        <th>Items</th>
                         <th>Total</th>
-                        <th>Action</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody id="salesHistoryData"></tbody>
@@ -287,6 +389,107 @@
                 <div class="modal-buttons">
                     <button type="submit" class="save-btn">Save Changes</button>
                     <button type="button" class="cancel-btn">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Modal for Password Change -->
+    <div id="changePasswordModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h3>Change Password</h3>
+            <form id="changePasswordForm">
+                <input type="hidden" id="selectedUsername">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="displayUsername" disabled>
+                </div>
+                <div class="form-group">
+                    <label>New Password</label>
+                    <input type="password" id="newPassword" required 
+                           minlength="6" placeholder="Enter new password">
+                </div>
+                <div class="form-group">
+                    <label>Confirm Password</label>
+                    <input type="password" id="confirmPassword" required 
+                           minlength="6" placeholder="Confirm new password">
+                </div>
+                <div class="password-requirements">
+                    <p>Password must:</p>
+                    <ul>
+                        <li>Be at least 6 characters long</li>
+                        <li>Include at least one number</li>
+                        <li>Include at least one letter</li>
+                    </ul>
+                </div>
+                <div class="modal-buttons">
+                    <button type="submit" class="save-btn">Change Password</button>
+                    <button type="button" class="cancel-btn" onclick="closePasswordModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Employee Modal -->
+    <div id="addEmployeeModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h3>Add New Employee</h3>
+            <form id="addEmployeeForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Full Name*</label>
+                        <input type="text" id="empFullName" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Username*</label>
+                        <input type="text" id="empUsername" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Password*</label>
+                        <input type="password" id="empPassword" required minlength="6">
+                    </div>
+                    <div class="form-group">
+                        <label>Confirm Password*</label>
+                        <input type="password" id="empConfirmPassword" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Phone Number</label>
+                        <input type="tel" id="empPhone" pattern="[0-9]{10}">
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="empEmail">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Role*</label>
+                        <select id="empRole" required>
+                            <option value="employee">Employee</option>
+                            <option value="admin">Administrator</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select id="empStatus">
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="modal-buttons">
+                    <button type="submit" class="save-btn">Add Employee</button>
+                    <button type="button" class="cancel-btn" onclick="closeAddEmployeeModal()">Cancel</button>
                 </div>
             </form>
         </div>
