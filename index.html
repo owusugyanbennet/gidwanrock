@@ -94,9 +94,28 @@
 
         <div id="categories" class="section">
             <h3>Categories</h3>
-            <input type="text" id="categoryName" placeholder="Category Name">
-            <button onclick="addCategory()">Add Category</button>
-            <ul id="categoryList"></ul>
+            <div class="category-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="categoryName">Category Name</label>
+                        <div class="input-group">
+                            <input type="text" 
+                                   id="categoryName" 
+                                   placeholder="Enter category name">
+                            <button onclick="addCategory()" class="btn btn-primary">
+                                Add Category
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="category-container">
+                <h4>Current Categories</h4>
+                <div id="categoryList" class="category-list">
+                    <!-- Categories will be dynamically added here -->
+                </div>
+            </div>
         </div>
 
         <div id="reports" class="section">
@@ -253,11 +272,19 @@
             <h3>Category Management</h3>
             
             <div class="category-form">
-                <div class="input-group">
-                    <input type="text" id="newCategory" placeholder="Enter new category name">
-                    <button onclick="addCategory()" class="add-btn">
-                        <i class="fas fa-plus"></i> Add Category
-                    </button>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="newCategory">New Category Name</label>
+                        <div class="input-group">
+                            <input type="text" 
+                                   id="newCategory" 
+                                   placeholder="Enter category name"
+                                   required>
+                            <button onclick="addCategory()" class="btn btn-primary">
+                                <i class="fas fa-plus"></i> Add Category
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
 

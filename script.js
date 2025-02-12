@@ -101,7 +101,7 @@ function showSection(sectionId) {
 
 // Function to add new category
 function addCategory() {
-    const categoryInput = document.getElementById('newCategory');
+    const categoryInput = document.getElementById('categoryName');
     const categoryName = categoryInput.value.trim();
 
     if (!categoryName) {
@@ -109,7 +109,6 @@ function addCategory() {
         return;
     }
 
-    // Check if category already exists
     if (categories.includes(categoryName)) {
         alert('This category already exists!');
         return;
@@ -117,11 +116,16 @@ function addCategory() {
 
     // Add new category
     categories.push(categoryName);
-    updateCategoryList();
-    categoryInput.value = ''; // Clear input
     
-    // Update category select in add stock form
+    // Clear input
+    categoryInput.value = '';
+    
+    // Update displays
+    updateCategoryList();
     updateCategorySelect();
+    
+    // Show success message
+    alert('Category added successfully!');
 }
 
 // Function to update category list display
@@ -134,171 +138,74 @@ function updateCategoryList() {
         categoryList.innerHTML += `
             <div class="category-item">
                 <span>${category}</span>
-                <button onclick="deleteCategory('${category}')" class="delete-btn">
-                    <i class="fas fa-trash"></i>
+                <button onclick="deleteCategory('${category}')" class="btn btn-danger btn-sm">
+                    <i class="fas fa-trash"></i> Delete
                 </button>
             </div>
         `;
     });
 }
 
-// Function to delete category
-function deleteCategory(categoryName) {
-    // Check if category is in use
-    const categoryInUse = inventory.some(item => item.category === categoryName);
-    
-    if (categoryInUse) {
-        alert('Cannot delete category that is in use by products!');
-        return;
-    }
-
-    if (confirm(`Are you sure you want to delete category "${categoryName}"?`)) {
-        categories = categories.filter(cat => cat !== categoryName);
-        updateCategoryList();
-        updateCategorySelect();
-    }
-}
-
-// Function to update category select in forms
+// Function to update category select in add stock form
 function updateCategorySelect() {
-    const categorySelects = document.querySelectorAll('.category-select');
-    
-    categorySelects.forEach(select => {
-        const currentValue = select.value;
-        select.innerHTML = '<option value="">Select Category</option>';
-        
-        categories.forEach(category => {
-            select.innerHTML += `
-                <option value="${category}" ${currentValue === category ? 'selected' : ''}>
-                    ${category}
-                </option>
-            `;
-        });
+    const categorySelect = document.getElementById('categorySelect');
+    if (!categorySelect) return;
+
+    categorySelect.innerHTML = '<option value="">Select a category</option>';
+    categories.forEach(category => {
+        categorySelect.innerHTML += `
+            <option value="${category}">${category}</option>
+        `;
     });
 }
 
-// Add new stock
-function addStock() {
-    const name = document.getElementById('productName').value;
-    const quantity = parseInt(document.getElementById('quantity').value);
-    const price = parseFloat(document.getElementById('price').value);
-    const category = document.getElementById('categorySelect').value;
-    const imageFile = document.getElementById('productImage').files[0];
-
-    if (name && quantity && price && category) {
-        // Handle image
-        if (imageFile) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const newItem = {
-                    id: inventory.length + 1,
-                    name,
-                    category,
-                    quantity,
-                    price,
-                    image: e.target.result
-                };
-                inventory.push(newItem);
-                updateStockList();
-                clearAddStockForm();
-            };
-            reader.readAsDataURL(imageFile);
-        } else {
-            // Add item without image
-            const newItem = {
-                id: inventory.length + 1,
-                name,
-                category,
-                quantity,
-                price,
-                image: null
-            };
-            inventory.push(newItem);
-            updateStockList();
-            clearAddStockForm();
+// Function to delete category
+function deleteCategory(category) {
+    if (confirm(`Are you sure you want to delete "${category}"?`)) {
+        const index = categories.indexOf(category);
+        if (index > -1) {
+            categories.splice(index, 1);
+            updateCategoryList();
+            updateCategorySelect();
         }
     }
 }
 
-// Update the employee view functions
-function updateProductGrid() {
-    const productGrid = document.getElementById('productGrid');
-    productGrid.innerHTML = '';
+// Add this to your initialization code
+function initializeAdminDashboard() {
+    updateCategoryList();
+    updateCategorySelect();
+    updateStockList();
+    setupNotificationPanel();
+    updateSalesNotifications();
+}
+
+// Function to update stock list
+function updateStockList() {
+    const stockList = document.getElementById('stockList');
+    stockList.innerHTML = '';
     
     inventory.forEach(item => {
-        if (item.quantity > 0) {
-            const imageElement = item.image 
-                ? `<img src="${item.image}" alt="${item.name}">`
-                : `<div class="no-image-placeholder">No Image Available</div>`;
-
-            productGrid.innerHTML += `
-                <div class="product-card">
-                    ${imageElement}
-                    <h4>${item.name}</h4>
-                    <p class="price">${formatGhanaCedis(item.price)}</p>
-                    <p class="stock">Available: ${item.quantity} units</p>
-                    <div class="sell-controls">
-                        <input type="number" 
-                               id="quantity-${item.id}" 
-                               min="1" 
-                               max="${item.quantity}" 
-                               value="1"
-                               onchange="validateQuantity(this, ${item.quantity})">
-                        <button onclick="sellProductItem(${item.id})">Sell</button>
-                    </div>
-                </div>
-            `;
-        }
-    });
-}
-
-// Add quantity validation
-function validateQuantity(input, max) {
-    if (input.value > max) {
-        input.value = max;
-    }
-    if (input.value < 1) {
-        input.value = 1;
-    }
-}
-
-// Update the sell function
-function sellProductItem(productId) {
-    const quantityInput = document.getElementById(`quantity-${productId}`);
-    const quantity = parseInt(quantityInput.value);
-    
-    const product = inventory.find(item => item.id === productId);
-    if (product && quantity <= product.quantity) {
-        product.quantity -= quantity;
-        sales.push({
-            productId,
-            productName: product.name,
-            quantity,
-            price: product.price,
-            date: new Date()
-        });
-        
-        // Show success message
-        alert(`Sold ${quantity} ${product.name}(s) for ${formatGhanaCedis(quantity * product.price)}`);
-        
-        // Update the display
-        updateProductGrid();
-    } else {
-        alert('Invalid quantity or insufficient stock!');
-    }
-}
-
-// Update UI functions
-function updateCategoryList() {
-    const categoryList = document.getElementById('categoryList');
-    const categorySelect = document.getElementById('categorySelect');
-    
-    categoryList.innerHTML = '';
-    categorySelect.innerHTML = '';
-    
-    categories.forEach(category => {
-        categoryList.innerHTML += `<li>${category}</li>`;
-        categorySelect.innerHTML += `<option value="${category}">${category}</option>`;
+        const profitMargin = ((item.price - item.cost) / item.cost) * 100;
+        stockList.innerHTML += `
+            <tr>
+                <td>
+                    ${item.image ? `<img src="${item.image}" alt="${item.name}" class="product-image">` : 'No Image'}
+                </td>
+                <td>${item.name}</td>
+                <td>${item.category}</td>
+                <td>${item.quantity}</td>
+                <td>${formatGhanaCedis(item.cost)}</td>
+                <td>${formatGhanaCedis(item.price)}</td>
+                <td class="${profitMargin >= 0 ? 'profit-positive' : 'profit-negative'}">
+                    ${profitMargin.toFixed(2)}%
+                </td>
+                <td>
+                    <button onclick="editStock(${item.id})" class="edit-btn">Edit</button>
+                    <button onclick="deleteStock(${item.id})" class="delete-btn">Delete</button>
+                </td>
+            </tr>
+        `;
     });
 }
 
