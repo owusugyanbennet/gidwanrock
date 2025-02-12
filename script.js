@@ -4,16 +4,11 @@ const users = {
     employee: { password: 'emp123', role: 'employee' }
 };
 
-// Sample data storage (in a real application, this would be in a database)
+// Initialize empty arrays
 let categories = [];
-let inventory = [
-    { id: 1, name: 'Laptop', category: 'Electronics', quantity: 10, price: 5999.99 },
-    { id: 2, name: 'T-Shirt', category: 'Clothing', quantity: 50, price: 89.99 }
-];
-let sales = [];
-
-// Initialize cart array
+let inventory = [];
 let currentCart = [];
+let sales = [];
 
 // Add these variables at the top of your script
 let salesUpdateInterval;
@@ -55,15 +50,87 @@ const companyInfo = {
     ]
 };
 
-// Login function
+// Clear any existing data
+function clearDefaultData() {
+    localStorage.removeItem('inventory');
+    localStorage.removeItem('categories');
+    inventory = [];
+    categories = [];
+    updateStockList();
+    updateCategoryList();
+    updateProductSelect();
+}
+
+// Initialize admin dashboard
+function initializeAdminDashboard() {
+    // Load saved data
+    const savedCategories = localStorage.getItem('categories');
+    const savedInventory = localStorage.getItem('inventory');
+    
+    if (savedCategories) {
+        categories = JSON.parse(savedCategories);
+    } else {
+        categories = []; // Ensure empty array if no saved categories
+    }
+    
+    if (savedInventory) {
+        inventory = JSON.parse(savedInventory);
+    } else {
+        inventory = []; // Ensure empty array if no saved inventory
+    }
+    
+    updateCategoryList();
+    updateCategorySelect();
+    updateStockList();
+    setupNotificationPanel();
+    updateSalesNotifications();
+}
+
+// Initialize employee dashboard
+function initializeEmployeeSales() {
+    // Load saved data
+    const savedInventory = localStorage.getItem('inventory');
+    if (savedInventory) {
+        inventory = JSON.parse(savedInventory);
+    } else {
+        inventory = []; // Ensure empty array if no saved inventory
+    }
+    
+    currentCart = []; // Reset cart
+    updateProductSelect();
+    updateCartDisplay();
+}
+
+// Update product selection for employees
+function updateProductSelect() {
+    const productSelect = document.getElementById('productSelect');
+    if (!productSelect) return;
+
+    productSelect.innerHTML = '<option value="">Select a product...</option>';
+    
+    // Only show products with quantity > 0
+    inventory.filter(item => item.quantity > 0).forEach(item => {
+        productSelect.innerHTML += `
+            <option value="${item.id}">
+                ${item.name} - ${formatGhanaCedis(item.price)} 
+                (${item.quantity} available)
+            </option>
+        `;
+    });
+}
+
+// Call this when the page loads
+document.addEventListener('DOMContentLoaded', function() {
+    // Clear any default data
+    clearDefaultData();
+});
+
+// Update the login function
 function login() {
     const username = document.getElementById('username').value;
     const password = document.getElementById('password').value;
 
     if (users[username] && users[username].password === password) {
-        // Update last login timestamp
-        users[username].lastLogin = new Date().toISOString();
-        
         currentUser = username;
         document.getElementById('loginForm').style.display = 'none';
         
@@ -117,6 +184,9 @@ function addCategory() {
     // Add new category
     categories.push(categoryName);
     
+    // Save to localStorage
+    localStorage.setItem('categories', JSON.stringify(categories));
+    
     // Clear input
     categoryInput.value = '';
     
@@ -165,33 +235,24 @@ function deleteCategory(category) {
         const index = categories.indexOf(category);
         if (index > -1) {
             categories.splice(index, 1);
+            // Save to localStorage
+            localStorage.setItem('categories', JSON.stringify(categories));
             updateCategoryList();
             updateCategorySelect();
         }
     }
 }
 
-// Add this to your initialization code
-function initializeAdminDashboard() {
-    updateCategoryList();
-    updateCategorySelect();
-    updateStockList();
-    setupNotificationPanel();
-    updateSalesNotifications();
-}
-
 // Function to update stock list
 function updateStockList() {
     const stockList = document.getElementById('stockList');
+    if (!stockList) return;
+
     stockList.innerHTML = '';
-    
     inventory.forEach(item => {
         const profitMargin = ((item.price - item.cost) / item.cost) * 100;
         stockList.innerHTML += `
             <tr>
-                <td>
-                    ${item.image ? `<img src="${item.image}" alt="${item.name}" class="product-image">` : 'No Image'}
-                </td>
                 <td>${item.name}</td>
                 <td>${item.category}</td>
                 <td>${item.quantity}</td>
@@ -201,8 +262,8 @@ function updateStockList() {
                     ${profitMargin.toFixed(2)}%
                 </td>
                 <td>
-                    <button onclick="editStock(${item.id})" class="edit-btn">Edit</button>
-                    <button onclick="deleteStock(${item.id})" class="delete-btn">Delete</button>
+                    <button onclick="editStock(${item.id})" class="btn btn-primary btn-sm">Edit</button>
+                    <button onclick="deleteStock(${item.id})" class="btn btn-danger btn-sm">Delete</button>
                 </td>
             </tr>
         `;
@@ -215,35 +276,6 @@ function formatGhanaCedis(amount) {
         style: 'currency',
         currency: 'GHS'
     }).format(amount);
-}
-
-// Then update the display functions to use it
-function updateStockList() {
-    const stockList = document.getElementById('stockList');
-    stockList.innerHTML = '';
-    
-    inventory.forEach(item => {
-        const profitMargin = ((item.price - item.cost) / item.cost) * 100;
-        stockList.innerHTML += `
-            <tr>
-                <td>
-                    ${item.image ? `<img src="${item.image}" alt="${item.name}" class="product-image">` : 'No Image'}
-                </td>
-                <td>${item.name}</td>
-                <td>${item.category}</td>
-                <td>${item.quantity}</td>
-                <td>${formatGhanaCedis(item.cost)}</td>
-                <td>${formatGhanaCedis(item.price)}</td>
-                <td class="${profitMargin >= 0 ? 'profit-positive' : 'profit-negative'}">
-                    ${profitMargin.toFixed(2)}%
-                </td>
-                <td>
-                    <button onclick="editStock(${item.id})" class="edit-btn">Edit</button>
-                    <button onclick="deleteStock(${item.id})" class="delete-btn">Delete</button>
-                </td>
-            </tr>
-        `;
-    });
 }
 
 function clearAddStockForm() {
@@ -570,23 +602,6 @@ function updateUnitPrice() {
     }
 }
 
-// Update the updateProductSelect function
-function updateProductSelect() {
-    const productSelect = document.getElementById('productSelect');
-    if (!productSelect) return; // Guard clause in case element doesn't exist
-    
-    productSelect.innerHTML = '<option value="">Select a product...</option>';
-    
-    inventory.forEach(item => {
-        if (item.quantity > 0) {
-            productSelect.innerHTML += `
-                <option value="${item.id}">${item.name} - GH₵ ${item.price.toFixed(2)} 
-                (${item.quantity} available)</option>
-            `;
-        }
-    });
-}
-
 // Add item to cart
 function addToCart() {
     const productSelect = document.getElementById('productSelect');
@@ -668,12 +683,6 @@ function updateCartDisplay() {
 
     cartTotal.textContent = formatGhanaCedis(total);
 }
-
-// Initialize cart when page loads
-document.addEventListener('DOMContentLoaded', function() {
-    currentCart = []; // Initialize empty cart
-    updateProductSelect(); // Populate product dropdown
-});
 
 // Remove item from cart
 function removeFromCart(index) {
@@ -1675,12 +1684,73 @@ function generateSaleId() {
     return 'SALE-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
 }
 
-// Make sure to initialize these when the employee logs in
-function initializeEmployeeSales() {
-    currentCart = [];
-    updateCartDisplay();
-    updateStockList();
-    if (Array.isArray(sales)) {
-        updateSalesHistory();
+// Make sure this is called when employee dashboard is loaded
+function showEmployeeDashboard() {
+    document.getElementById('loginForm').style.display = 'none';
+    document.getElementById('employeeDashboard').style.display = 'block';
+    initializeEmployeeSales();
+}
+
+// Add this function to save inventory
+function saveInventory() {
+    localStorage.setItem('inventory', JSON.stringify(inventory));
+}
+
+// Update the addStock function to save inventory
+function addStock() {
+    const productName = document.getElementById('productName').value.trim();
+    const category = document.getElementById('categorySelect').value;
+    const quantity = parseInt(document.getElementById('quantity').value);
+    const price = parseFloat(document.getElementById('price').value);
+    const cost = parseFloat(document.getElementById('cost').value);
+
+    // Validation
+    if (!productName || !category || isNaN(quantity) || isNaN(price) || isNaN(cost)) {
+        alert('Please fill all fields with valid values!');
+        return;
     }
-} 
+
+    // Create new stock item
+    const newItem = {
+        id: inventory.length + 1,
+        name: productName,
+        category: category,
+        quantity: quantity,
+        price: price,
+        cost: cost
+    };
+
+    // Add to inventory
+    inventory.push(newItem);
+
+    // Save to localStorage
+    localStorage.setItem('inventory', JSON.stringify(inventory));
+
+    // Update displays
+    updateStockList();
+    updateProductSelect();
+
+    // Clear form
+    document.getElementById('productName').value = '';
+    document.getElementById('categorySelect').value = '';
+    document.getElementById('quantity').value = '';
+    document.getElementById('price').value = '';
+    document.getElementById('cost').value = '';
+
+    // Show success message
+    alert('Stock added successfully!');
+}
+
+// Document ready function
+document.addEventListener('DOMContentLoaded', function() {
+    // Load saved data
+    const savedCategories = localStorage.getItem('categories');
+    const savedInventory = localStorage.getItem('inventory');
+    
+    if (savedCategories) {
+        categories = JSON.parse(savedCategories);
+    }
+    if (savedInventory) {
+        inventory = JSON.parse(savedInventory);
+    }
+}); 
