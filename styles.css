@@ -623,7 +623,7 @@ nav button:hover {
     width: 100%;
     height: 100%;
     background-color: rgba(0, 0, 0, 0.5);
-    z-index: 1001;
+    z-index: 1000;
 }
 
 .modal-content {
@@ -631,10 +631,10 @@ nav button:hover {
     background-color: #fff;
     margin: 50px auto;
     padding: 25px;
-    border-radius: 10px;
+    border-radius: 8px;
     width: 90%;
     max-width: 500px;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
 }
 
 .close-modal {
@@ -656,10 +656,19 @@ nav button:hover {
     color: #333;
 }
 
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
 .modal-buttons {
     display: flex;
-    gap: 10px;
     justify-content: flex-end;
+    gap: 10px;
     margin-top: 20px;
 }
 
@@ -1000,14 +1009,77 @@ nav button:hover {
 /* Sales History Styles */
 .sales-filters {
     display: flex;
-    gap: 15px;
+    gap: 20px;
+    margin-bottom: 20px;
+    padding: 15px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.sales-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
     margin-bottom: 20px;
 }
 
-.sales-filters input {
-    padding: 8px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
+.summary-card {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    text-align: center;
+}
+
+.summary-card h4 {
+    margin: 0 0 10px 0;
+    color: #666;
+}
+
+.summary-card p {
+    margin: 5px 0;
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #333;
+}
+
+#salesHistoryTable {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.sale-details {
+    padding: 20px;
+}
+
+.sale-header, .customer-details {
+    margin-bottom: 20px;
+}
+
+.items-table {
+    width: 100%;
+    margin: 20px 0;
+    border-collapse: collapse;
+}
+
+.items-table th, .items-table td {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.sale-totals {
+    margin-top: 20px;
+    text-align: right;
+}
+
+.modal-actions {
+    margin-top: 20px;
+    text-align: right;
 }
 
 /* Notification Panel Styles */
@@ -1121,19 +1193,19 @@ nav button:hover {
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-top: 20px;
 }
 
 #userTable {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 20px;
 }
 
 #userTable th,
 #userTable td {
     padding: 12px;
     text-align: left;
-    border-bottom: 1px solid #ddd;
+    border-bottom: 1px solid #eee;
 }
 
 #userTable th {
@@ -1145,24 +1217,58 @@ nav button:hover {
     background-color: #f9f9f9;
 }
 
-.user-actions {
+.role-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.role-admin {
+    background-color: #e3f2fd;
+    color: #1565c0;
+}
+
+.role-selling {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+}
+
+.role-account {
+    background-color: #fff3e0;
+    color: #ef6c00;
+}
+
+.status-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+}
+
+.status-active {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+}
+
+.status-inactive {
+    background-color: #ffebee;
+    color: #c62828;
+}
+
+.current-user-label {
+    color: #666;
+    font-style: italic;
+}
+
+.action-buttons {
     display: flex;
-    gap: 8px;
+    gap: 5px;
+    flex-wrap: wrap;
 }
 
-.change-password-btn {
-    background-color: #2196F3;
-    color: white;
-    border: none;
-    padding: 6px 12px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 14px;
-    transition: background-color 0.3s ease;
-}
-
-.change-password-btn:hover {
-    background-color: #1976D2;
+.btn-sm {
+    padding: 4px 8px;
+    font-size: 12px;
 }
 
 /* Password Modal Styles */
@@ -1200,8 +1306,14 @@ nav button:hover {
 .password-requirements {
     margin: 15px 0;
     padding: 10px;
-    background-color: #f5f5f5;
+    background-color: #f8f9fa;
     border-radius: 4px;
+}
+
+.password-requirements p {
+    margin: 0;
+    font-weight: bold;
+    color: #666;
 }
 
 .password-requirements ul {
@@ -1224,7 +1336,6 @@ nav button:hover {
     border: none;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 14px;
 }
 
 .save-btn {
@@ -1310,172 +1421,85 @@ nav button:hover {
 }
 
 /* Employee Management Styles */
-.employee-controls {
-    margin-bottom: 20px;
-}
-
-.add-employee-btn {
-    background-color: #4CAF50;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 4px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 14px;
-}
-
-.add-employee-btn i {
-    font-size: 16px;
-}
-
-.employee-list-container {
+#employeeManagement {
     background: white;
     padding: 20px;
     border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-top: 20px;
 }
 
-#employeeTable {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-#employeeTable th,
-#employeeTable td {
-    padding: 12px;
-    text-align: left;
-    border-bottom: 1px solid #ddd;
-}
-
-#employeeTable th {
-    background-color: #f5f5f5;
-    font-weight: 600;
-}
-
-.employee-status {
-    padding: 4px 8px;
-    border-radius: 12px;
-    font-size: 12px;
-    font-weight: 500;
-}
-
-.status-active {
-    background-color: #e8f5e9;
-    color: #4CAF50;
-}
-
-.status-inactive {
-    background-color: #ffebee;
-    color: #f44336;
-}
-
-.employee-actions {
-    display: flex;
-    gap: 8px;
-}
-
-.edit-employee-btn,
-.delete-employee-btn {
-    padding: 6px 12px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 12px;
-}
-
-.edit-employee-btn {
-    background-color: #2196F3;
-    color: white;
-}
-
-.delete-employee-btn {
-    background-color: #f44336;
-    color: white;
-}
-
-/* Form Styles */
-.form-row {
-    display: flex;
-    gap: 20px;
+#employeeManagement h3 {
     margin-bottom: 15px;
+    color: #333;
 }
 
-.form-group {
-    flex: 1;
-}
-
-.form-group label {
-    display: block;
-    margin-bottom: 5px;
-    color: #666;
-}
-
-.form-group input,
-.form-group select {
+#employeeManagement input,
+#employeeManagement select {
     width: 100%;
-    padding: 8px;
+    padding: 10px;
+    margin-bottom: 10px;
     border: 1px solid #ddd;
     border-radius: 4px;
     font-size: 14px;
 }
 
-.form-group.error input {
-    border-color: #f44336;
-}
-
-.error-message {
-    color: #f44336;
-    font-size: 12px;
-    margin-top: 5px;
-}
-
-/* Print-related styles */
-.print-btn {
-    background-color: #2196F3;
+#employeeManagement button {
+    background-color: #4CAF50; /* Green */
     color: white;
     border: none;
-    padding: 6px 12px;
+    padding: 10px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s ease;
+}
+
+#employeeManagement button:hover {
+    background-color: #45a049; /* Darker green */
+}
+
+#employeeList {
+    margin-top: 15px;
+}
+
+#employeeList div {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+}
+
+#employeeList span {
+    flex: 1;
+    color: #333;
+}
+
+.btn {
+    padding: 5px 10px;
+    border: none;
     border-radius: 4px;
     cursor: pointer;
     font-size: 12px;
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
 }
 
-.print-btn i {
-    font-size: 14px;
+.btn-primary {
+    background-color: #2196F3; /* Blue */
+    color: white;
 }
 
-.print-btn:hover {
-    background-color: #1976D2;
+.btn-danger {
+    background-color: #f44336; /* Red */
+    color: white;
 }
 
-/* Receipt preview styles */
-.receipt-preview {
-    background: white;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    max-width: 300px;
-    margin: 20px auto;
+.btn-primary:hover {
+    background-color: #1976D2; /* Darker blue */
 }
 
-@media print {
-    body * {
-        visibility: hidden;
-    }
-    .receipt * {
-        visibility: visible;
-    }
-    .receipt {
-        position: absolute;
-        left: 0;
-        top: 0;
-    }
+.btn-danger:hover {
+    background-color: #d32f2f; /* Darker red */
 }
 
 /* Category Management Styles */
@@ -1519,4 +1543,376 @@ nav button:hover {
 
 .category-container {
     margin-top: 20px;
+}
+
+/* General Styles */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    margin: 0;
+    padding: 20px;
+}
+
+/* Dashboard Container */
+#adminDashboard, #accountingSection {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+}
+
+/* Headings */
+h1, h3 {
+    color: #333;
+}
+
+/* Accounting Dashboard Styles */
+#accountingSection {
+    margin-top: 20px;
+}
+
+#accountingSection input {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+#accountingSection button {
+    background-color: #007BFF; /* Blue */
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s ease;
+}
+
+#accountingSection button:hover {
+    background-color: #0056b3; /* Darker blue */
+}
+
+#goodsList {
+    margin-top: 15px;
+}
+
+#goodsList div {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+}
+
+#goodsList span {
+    flex: 1;
+    color: #333;
+}
+
+/* Responsive Design */
+@media (max-width: 600px) {
+    #employeeManagement input,
+    #accountingSection input,
+    #employeeManagement select {
+        font-size: 12px;
+    }
+
+    #employeeManagement button,
+    #accountingSection button {
+        font-size: 12px;
+        padding: 8px;
+    }
+}
+
+/* Employee Management Styles */
+.employee-form {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.status-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.status-active {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+}
+
+.status-inactive {
+    background-color: #ffebee;
+    color: #c62828;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 5px;
+}
+
+.btn-sm {
+    padding: 4px 8px;
+    font-size: 12px;
+}
+
+.btn-warning {
+    background-color: #ff9800;
+    color: white;
+}
+
+.btn-warning:hover {
+    background-color: #f57c00;
+}
+
+/* Admin-specific styles */
+.role-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.role-admin {
+    background-color: #e3f2fd;
+    color: #1565c0;
+}
+
+.admin-row {
+    background-color: rgba(227, 242, 253, 0.1);
+}
+
+.admin-protected {
+    color: #9e9e9e;
+    font-style: italic;
+    font-size: 12px;
+}
+
+/* Update action buttons for better spacing */
+.action-buttons {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+.action-buttons button {
+    white-space: nowrap;
+}
+
+/* Add tooltip for protected admin accounts */
+.admin-protected {
+    position: relative;
+    cursor: help;
+}
+
+.admin-protected:hover::after {
+    content: 'Only administrators can modify admin accounts';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 1000;
+}
+
+/* Inventory View Styles */
+.inventory-controls {
+    margin-bottom: 20px;
+    padding: 15px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.search-filters {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.search-filters input,
+.search-filters select {
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    min-width: 200px;
+}
+
+#stockTable {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+#stockTable th,
+#stockTable td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
+
+#stockTable th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+}
+
+.product-thumbnail {
+    width: 50px;
+    height: 50px;
+    object-fit: cover;
+    border-radius: 4px;
+}
+
+.no-image {
+    width: 50px;
+    height: 50px;
+    background: #f5f5f5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: #666;
+    border-radius: 4px;
+}
+
+.stock-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.stock-badge.in-stock {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+}
+
+.stock-badge.low-stock {
+    background-color: #fff3e0;
+    color: #ef6c00;
+}
+
+.stock-badge.out-of-stock {
+    background-color: #ffebee;
+    color: #c62828;
+}
+
+tr.stock-out-of-stock {
+    background-color: rgba(255, 235, 238, 0.2);
+}
+
+tr.stock-low-stock {
+    background-color: rgba(255, 243, 224, 0.2);
+}
+
+#inventoryTable {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    background: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+#inventoryTable th,
+#inventoryTable td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
+
+#inventoryTable th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    color: #333;
+}
+
+#inventoryTable tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+.invalid-payment {
+    border-color: #dc3545;
+    background-color: #fff8f8;
+}
+
+#cartTable input[type="number"] {
+    width: 100px;
+    padding: 5px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+#cartTable tfoot tr td {
+    padding: 8px;
+}
+
+#cartTable tfoot input {
+    text-align: right;
+}
+
+.change-positive {
+    color: #28a745;
+}
+
+.change-negative {
+    color: #dc3545;
+}
+
+/* Password Reset Modal Styles */
+.employee-name {
+    font-weight: bold;
+    color: #333;
+    margin: 5px 0;
+    padding: 8px;
+    background-color: #f5f5f5;
+    border-radius: 4px;
+}
+
+.password-requirements {
+    margin: 15px 0;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+}
+
+.password-requirements p {
+    margin: 0;
+    font-weight: bold;
+    color: #666;
+}
+
+.password-requirements ul {
+    margin: 5px 0;
+    padding-left: 20px;
+    font-size: 14px;
+    color: #666;
+}
+
+#passwordResetForm .form-group {
+    margin-bottom: 15px;
+}
+
+#passwordResetForm input[type="password"] {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
 } 

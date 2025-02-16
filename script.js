@@ -1,7 +1,26 @@
 // Sample users (in a real application, this would be in a database)
 const users = {
-    admin: { password: 'admin123', role: 'admin' },
-    employee: { password: 'emp123', role: 'employee' }
+    admin: { 
+        password: 'admin123', 
+        role: 'admin',
+        fullName: 'Administrator',
+        status: 'active',
+        lastLogin: new Date().toLocaleString()
+    },
+    employee1: { 
+        password: 'emp123', 
+        role: 'selling',
+        fullName: 'Sales Person 1',
+        status: 'active',
+        lastLogin: 'Never'
+    },
+    employee2: { 
+        password: 'emp456', 
+        role: 'account',
+        fullName: 'Accountant 1',
+        status: 'active',
+        lastLogin: 'Never'
+    }
 };
 
 // Initialize empty arrays
@@ -25,22 +44,316 @@ let salesData = {
 // Initialize employees array
 let employees = [];
 
+// Variable to store current sale details for modal
+let currentSaleDetails = null;
+
+// Function to load employees from local storage
+function loadEmployees() {
+    const savedEmployees = localStorage.getItem('employees');
+    if (savedEmployees) {
+        employees = JSON.parse(savedEmployees);
+    }
+}
+
+// Function to add a new employee
+function addEmployee() {
+    const username = document.getElementById('employeeUsername').value.trim();
+    const password = document.getElementById('employeePassword').value;
+    const fullName = document.getElementById('employeeFullName').value.trim();
+    const phone = document.getElementById('employeePhone').value.trim();
+    const role = document.getElementById('employeeRole').value;
+    const status = document.getElementById('employeeStatus').value;
+
+    // Check if trying to add admin
+    if (role === 'admin' && !checkAdminPermissions()) {
+        return;
+    }
+
+    if (!username || !password || !fullName || !role) {
+        alert('Please fill all required fields!');
+        return;
+    }
+
+    // Additional password validation for admin accounts
+    if (role === 'admin' && password.length < 8) {
+        alert('Admin passwords must be at least 8 characters long!');
+        return;
+    }
+
+    // Check if username already exists
+    if (employees.some(emp => emp.username === username)) {
+        alert('Username already exists!');
+        return;
+    }
+
+    // Create new employee object
+    const newEmployee = {
+        id: Date.now(),
+        username,
+        password,
+        fullName,
+        phone,
+        role,
+        status,
+        dateAdded: new Date().toISOString(),
+        lastLogin: null,
+        addedBy: currentUser // Track who added this employee
+    };
+
+    // Add to employees array
+    employees.push(newEmployee);
+
+    // Add to users object for authentication
+    users[username] = {
+        password: password,
+        role: role,
+        status: status
+    };
+
+    // Save to localStorage
+    saveEmployees();
+    
+    // Clear form
+    clearEmployeeForm();
+    
+    // Update display
+    updateEmployeeList();
+    
+    alert('Employee added successfully!');
+}
+
+// Function to save employees to localStorage
+function saveEmployees() {
+    localStorage.setItem('employees', JSON.stringify(employees));
+    localStorage.setItem('users', JSON.stringify(users));
+}
+
+// Function to update employee list display
+function updateEmployeeList() {
+    const employeeList = document.getElementById('employeeList');
+    if (!employeeList) return;
+
+    employeeList.innerHTML = '';
+    employees.forEach(emp => {
+        const statusClass = emp.status === 'active' ? 'status-active' : 'status-inactive';
+        const roleDisplay = getRoleDisplay(emp.role);
+        const isAdminUser = emp.role === 'admin';
+        const canModify = isAdmin() || !isAdminUser; // Only admins can modify other admins
+        
+        employeeList.innerHTML += `
+            <tr class="${isAdminUser ? 'admin-row' : ''}">
+                <td>${emp.username}</td>
+                <td>${emp.fullName}</td>
+                <td>
+                    <span class="role-badge ${isAdminUser ? 'role-admin' : ''}">${roleDisplay}</span>
+                </td>
+                <td><span class="status-badge ${statusClass}">${emp.status}</span></td>
+                <td class="action-buttons">
+                    ${canModify ? `
+                        <button onclick="editEmployee(${emp.id})" class="btn-primary btn-sm">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                        <button onclick="toggleEmployeeStatus(${emp.id})" class="btn-warning btn-sm">
+                            ${emp.status === 'active' ? 'Deactivate' : 'Activate'}
+                        </button>
+                        <button onclick="deleteEmployee(${emp.id})" class="btn-danger btn-sm">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    ` : '<span class="admin-protected">Protected</span>'}
+                </td>
+            </tr>
+        `;
+    });
+}
+
+// Helper function to get role display name
+function getRoleDisplay(role) {
+    switch(role) {
+        case 'admin':
+            return 'Administrator';
+        case 'selling':
+            return 'Sales Person';
+        case 'account':
+            return 'Accountant';
+        default:
+            return role;
+    }
+}
+
+// Function to toggle employee status
+function toggleEmployeeStatus(employeeId) {
+    const employee = employees.find(emp => emp.id === employeeId);
+    if (employee) {
+        employee.status = employee.status === 'active' ? 'inactive' : 'active';
+        users[employee.username].status = employee.status;
+        saveEmployees();
+        updateEmployeeList();
+    }
+}
+
+// Function to edit employee
+function editEmployee(employeeId) {
+    // Check admin permissions
+    if (!checkAdminPermissions()) return;
+
+    const employee = employees.find(emp => emp.id === employeeId);
+    if (!employee) {
+        alert('Employee not found!');
+        return;
+    }
+
+    // Open edit modal
+    const modal = document.getElementById('editEmployeeModal');
+    if (!modal) {
+        // If modal doesn't exist, create it
+        createEditModal();
+    }
+
+    // Populate form with employee data
+    document.getElementById('editEmployeeId').value = employee.id;
+    document.getElementById('editUsername').value = employee.username;
+    document.getElementById('editFullName').value = employee.fullName;
+    document.getElementById('editPhone').value = employee.phone || '';
+    document.getElementById('editRole').value = employee.role;
+    document.getElementById('editStatus').value = employee.status;
+
+    // Show modal
+    document.getElementById('editEmployeeModal').style.display = 'block';
+}
+
+// Function to create edit modal if it doesn't exist
+function createEditModal() {
+    const modalHtml = `
+        <div id="editEmployeeModal" class="modal">
+            <div class="modal-content">
+                <span class="close-modal" onclick="closeEditModal()">&times;</span>
+                <h3>Edit Employee</h3>
+                <form id="editEmployeeForm" onsubmit="updateEmployee(event)">
+                    <input type="hidden" id="editEmployeeId">
+                    <div class="form-group">
+                        <label for="editUsername">Username</label>
+                        <input type="text" id="editUsername" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="editFullName">Full Name*</label>
+                        <input type="text" id="editFullName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editPhone">Phone Number</label>
+                        <input type="tel" id="editPhone">
+                    </div>
+                    <div class="form-group">
+                        <label for="editRole">Role*</label>
+                        <select id="editRole" required>
+                            <option value="admin">Administrator</option>
+                            <option value="selling">Sales Person</option>
+                            <option value="account">Accountant</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="editStatus">Status</label>
+                        <select id="editStatus">
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                        </select>
+                    </div>
+                    <div class="modal-buttons">
+                        <button type="submit" class="save-btn">Save Changes</button>
+                        <button type="button" class="cancel-btn" onclick="closeEditModal()">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+// Function to update employee
+function updateEmployee(event) {
+    event.preventDefault();
+
+    const employeeId = parseInt(document.getElementById('editEmployeeId').value);
+    const employee = employees.find(emp => emp.id === employeeId);
+    
+    if (!employee) {
+        alert('Employee not found!');
+        return;
+    }
+
+    const newFullName = document.getElementById('editFullName').value.trim();
+    const newPhone = document.getElementById('editPhone').value.trim();
+    const newRole = document.getElementById('editRole').value;
+    const newStatus = document.getElementById('editStatus').value;
+
+    // Validate role change for admin
+    if ((employee.role === 'admin' || newRole === 'admin') && !checkAdminPermissions()) {
+        return;
+    }
+
+    // Update employee data
+    employee.fullName = newFullName;
+    employee.phone = newPhone;
+    employee.role = newRole;
+    employee.status = newStatus;
+    employee.lastModified = new Date().toISOString();
+    employee.modifiedBy = currentUser;
+
+    // Save changes
+    saveEmployees();
+    
+    // Update display
+    updateUserList();
+    
+    // Close modal
+    closeEditModal();
+    
+    // Show success message
+    alert('Employee updated successfully!');
+}
+
+// Function to close edit modal
+function closeEditModal() {
+    const modal = document.getElementById('editEmployeeModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+// Function to clear employee form
+function clearEmployeeForm() {
+    document.getElementById('employeeUsername').value = '';
+    document.getElementById('employeePassword').value = '';
+    document.getElementById('employeeFullName').value = '';
+    document.getElementById('employeePhone').value = '';
+    document.getElementById('employeeRole').value = '';
+    document.getElementById('employeeStatus').value = 'active';
+}
+
+// Initialize employee management
+document.addEventListener('DOMContentLoaded', function() {
+    if (document.getElementById('employeeManagement')) {
+        loadEmployees();
+        updateEmployeeList();
+    }
+});
+
 // Company information object
 const companyInfo = {
-    name: "YOUR COMPANY NAME",
-    address: "Your Complete Address",
-    phone: "Your Phone Number",
-    mobile: "Your Mobile Number",
-    email: "your@email.com",
-    website: "www.yourwebsite.com",
-    vatNumber: "VAT: Your VAT Number",
-    regNumber: "Reg: Your Registration Number",
-    logo: "path/to/your/logo.png",
-    branch: "Branch Name/Location",
+    name: "GIDWANROCK ENTERPRISE",
+    address: "Anyinasusu Off Offinso Road",
+    phone: "0242779167",
+    mobile: "0554528600",
+    email: "gidwanrock1@email.com",
+    website: "www.gidwanrock.com",
+    vatNumber: "VAT: 0.5%",
+    regNumber: "Reg: 1234567890",
+    logo: "images/loganb.png",
+    branch: "Anyinasusu",
     socialMedia: {
-        facebook: "your.facebook",
-        twitter: "@yourtwitter",
-        instagram: "@yourinstagram"
+        facebook: "gidwanrock1.facebook",
+        twitter: "@gidwanrock1",
+        instagram: "@gidwanrock1"
     },
     customMessage: "Special message or promotional text",
     termsAndConditions: [
@@ -49,6 +362,95 @@ const companyInfo = {
         "Other terms..."
     ]
 };
+// Initialize goods array
+let goods = [];
+
+// Function to load goods from local storage
+function loadGoods() {
+    const savedGoods = localStorage.getItem('goods');
+    if (savedGoods) {
+        goods = JSON.parse(savedGoods);
+    }
+}
+
+// Function to add goods
+function addGoods() {
+    const goodsName = document.getElementById('goodsName').value.trim();
+    const goodsAvailable = parseInt(document.getElementById('goodsAvailable').value);
+    const costPrice = parseFloat(document.getElementById('costPrice').value);
+    const sellingPrice = parseFloat(document.getElementById('sellingPrice').value);
+
+    if (!goodsName || isNaN(goodsAvailable) || isNaN(costPrice) || isNaN(sellingPrice)) {
+        alert('Please fill all fields with valid values!');
+        return;
+    }
+
+    // Add new goods
+    goods.push({ name: goodsName, available: goodsAvailable, cost: costPrice, selling: sellingPrice });
+    
+    // Save to localStorage
+    localStorage.setItem('goods', JSON.stringify(goods));
+
+    // Clear input fields
+    document.getElementById('goodsName').value = '';
+    document.getElementById('goodsAvailable').value = '';
+    document.getElementById('costPrice').value = '';
+    document.getElementById('sellingPrice').value = '';
+
+    alert('Goods added successfully!');
+    updateGoodsList(); // Update the goods list display
+}
+
+// Function to update goods list display
+function updateGoodsList() {
+    const goodsList = document.getElementById('goodsList');
+    if (!goodsList) return;
+
+    goodsList.innerHTML = '';
+    goods.forEach(good => {
+        goodsList.innerHTML += `
+            <div>
+                <span>${good.name} - Available: ${good.available}, Cost: ${good.cost}, Selling: ${good.selling}</span>
+            </div>
+        `;
+    });
+}
+
+// Call this function to initialize accounting on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadGoods(); // Load existing goods from local storage
+    updateGoodsList(); // Display the goods list
+}); 
+// Add session management variables
+let currentUser = null;
+let currentUserRole = null;
+
+// Function to save session
+function saveSession(username, role) {
+    sessionStorage.setItem('currentUser', username);
+    sessionStorage.setItem('currentUserRole', role);
+}
+
+// Function to load session
+function loadSession() {
+    const savedUser = sessionStorage.getItem('currentUser');
+    const savedRole = sessionStorage.getItem('currentUserRole');
+    
+    if (savedUser && savedRole) {
+        currentUser = savedUser;
+        currentUserRole = savedRole;
+        return true;
+    }
+    return false;
+}
+
+// Function to clear session
+function clearSession() {
+    sessionStorage.removeItem('currentUser');
+    sessionStorage.removeItem('currentUserRole');
+    currentUser = null;
+    currentUserRole = null;
+}
 
 // Clear any existing data
 function clearDefaultData() {
@@ -63,22 +465,7 @@ function clearDefaultData() {
 
 // Initialize admin dashboard
 function initializeAdminDashboard() {
-    // Load saved data
-    const savedCategories = localStorage.getItem('categories');
-    const savedInventory = localStorage.getItem('inventory');
-    
-    if (savedCategories) {
-        categories = JSON.parse(savedCategories);
-    } else {
-        categories = []; // Ensure empty array if no saved categories
-    }
-    
-    if (savedInventory) {
-        inventory = JSON.parse(savedInventory);
-    } else {
-        inventory = []; // Ensure empty array if no saved inventory
-    }
-    
+    loadFromLocalStorage();
     updateCategoryList();
     updateCategorySelect();
     updateStockList();
@@ -88,14 +475,7 @@ function initializeAdminDashboard() {
 
 // Initialize employee dashboard
 function initializeEmployeeSales() {
-    // Load saved data
-    const savedInventory = localStorage.getItem('inventory');
-    if (savedInventory) {
-        inventory = JSON.parse(savedInventory);
-    } else {
-        inventory = []; // Ensure empty array if no saved inventory
-    }
-    
+    loadFromLocalStorage();
     currentCart = []; // Reset cart
     updateProductSelect();
     updateCartDisplay();
@@ -111,7 +491,7 @@ function updateProductSelect() {
     // Only show products with quantity > 0
     inventory.filter(item => item.quantity > 0).forEach(item => {
         productSelect.innerHTML += `
-            <option value="${item.id}">
+            <option value="${item.id}" data-price="${item.price}" data-available="${item.quantity}" data-name="${item.name}">
                 ${item.name} - ${formatGhanaCedis(item.price)} 
                 (${item.quantity} available)
             </option>
@@ -119,10 +499,18 @@ function updateProductSelect() {
     });
 }
 
-// Call this when the page loads
+// Update page load initialization
 document.addEventListener('DOMContentLoaded', function() {
-    // Clear any default data
-    clearDefaultData();
+    loadFromLocalStorage();
+    
+    // Check for existing session
+    if (loadSession()) {
+        showDashboard();
+    } else {
+        document.getElementById('loginForm').style.display = 'block';
+        document.getElementById('adminDashboard').style.display = 'none';
+        document.getElementById('employeeDashboard').style.display = 'none';
+    }
 });
 
 // Update the login function
@@ -132,38 +520,91 @@ function login() {
 
     if (users[username] && users[username].password === password) {
         currentUser = username;
-        document.getElementById('loginForm').style.display = 'none';
+        currentUserRole = users[username].role;
         
-        if (users[username].role === 'admin') {
-            document.getElementById('adminDashboard').style.display = 'block';
-            initializeAdminDashboard();
-            initializeUserManagement();
-            startSalesUpdateCheck();
+        // Save session
+        saveSession(username, users[username].role);
+        
+        if (currentUserRole === 'account') {
+            window.location.href = 'accounting.html';
         } else {
-            document.getElementById('employeeDashboard').style.display = 'block';
-            initializeEmployeeSales();
+            showDashboard();
+            if (currentUserRole !== 'admin') {
+                initializeEmployeeDashboard();
+            }
         }
     } else {
         alert('Invalid credentials!');
     }
 }
 
-// Logout function
+// Function to show different sections
+function showSection(sectionId) {
+    // Hide all sections first
+    const sections = document.querySelectorAll('.section');
+    sections.forEach(section => {
+        section.style.display = 'none';
+    });
+
+    // Show the selected section
+    const selectedSection = document.getElementById(sectionId);
+    if (!selectedSection) {
+        console.error(`Section with id "${sectionId}" not found`);
+        return;
+    }
+    selectedSection.style.display = 'block';
+
+    // Special handling for specific sections
+    switch(sectionId) {
+        case 'salesHistory':
+            initializeSalesHistory();
+            break;
+        case 'inventory':
+            initializeInventoryView();
+            break;
+        case 'sell':
+            initializeSaleSection();
+            break;
+        case 'userManagement':
+            initializeUserManagement();
+            break;
+    }
+}
+
+// Update the showDashboard function
+function showDashboard() {
+    document.getElementById('loginForm').style.display = 'none';
+    
+    if (currentUserRole === 'admin') {
+        // Show admin dashboard and its default section
+        document.getElementById('adminDashboard').style.display = 'block';
+        document.getElementById('employeeDashboard').style.display = 'none';
+        
+        // Show the default section (e.g., viewStock)
+        showSection('viewStock');
+        initializeAdminDashboard();
+    } else {
+        // Show employee dashboard
+        document.getElementById('adminDashboard').style.display = 'none';
+        document.getElementById('employeeDashboard').style.display = 'block';
+        showSection('sell'); // Default to sell section for employees
+        initializeEmployeeDashboard();
+    }
+}
+
+// Update the logout function
 function logout() {
+    clearSession();
+    // Hide all dashboards and sections
     document.getElementById('loginForm').style.display = 'block';
     document.getElementById('adminDashboard').style.display = 'none';
     document.getElementById('employeeDashboard').style.display = 'none';
-    document.getElementById('username').value = '';
-    document.getElementById('password').value = '';
-}
-
-// Show different sections
-function showSection(sectionId) {
-    const sections = document.getElementsByClassName('section');
-    for (let section of sections) {
+    
+    // Clear any active sections
+    const sections = document.querySelectorAll('.section');
+    sections.forEach(section => {
         section.style.display = 'none';
-    }
-    document.getElementById(sectionId).style.display = 'block';
+    });
 }
 
 // Function to add new category
@@ -245,37 +686,240 @@ function deleteCategory(category) {
 
 // Function to update stock list
 function updateStockList() {
+    const stockTable = document.getElementById('stockTable');
+    if (!stockTable) {
+        // Create table if it doesn't exist
+        const tableContainer = document.getElementById('stockTableContainer');
+        if (tableContainer) {
+            tableContainer.innerHTML = `
+                <table id="stockTable" class="table">
+                    <thead>
+                        <tr>
+                            <th>Image</th>
+                            <th>Product</th>
+                            <th>Category</th>
+                            <th>Quantity</th>
+                            <th>Cost</th>
+                            <th>Selling Price (GH₵)</th>
+                            <th>Profit</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="stockList"></tbody>
+                </table>
+            `;
+        }
+    }
+
     const stockList = document.getElementById('stockList');
     if (!stockList) return;
 
     stockList.innerHTML = '';
     inventory.forEach(item => {
-        const profitMargin = ((item.price - item.cost) / item.cost) * 100;
+        const profit = item.price - item.cost; // Calculate profit
         stockList.innerHTML += `
             <tr>
+                <td>
+                    ${item.image ? 
+                        `<img src="${item.image}" alt="${item.name}" class="stock-image">` : 
+                        '<div class="no-image">No Image</div>'}
+                </td>
                 <td>${item.name}</td>
                 <td>${item.category}</td>
                 <td>${item.quantity}</td>
                 <td>${formatGhanaCedis(item.cost)}</td>
                 <td>${formatGhanaCedis(item.price)}</td>
-                <td class="${profitMargin >= 0 ? 'profit-positive' : 'profit-negative'}">
-                    ${profitMargin.toFixed(2)}%
-                </td>
+                <td>${formatGhanaCedis(profit)}</td> <!-- Display profit -->
                 <td>
-                    <button onclick="editStock(${item.id})" class="btn btn-primary btn-sm">Edit</button>
-                    <button onclick="deleteStock(${item.id})" class="btn btn-danger btn-sm">Delete</button>
+                    <button onclick="editStock(${item.id})" class="btn btn-primary btn-sm">
+                        <i class="fas fa-edit"></i> Edit
+                    </button>
+                    <button onclick="deleteStock(${item.id})" class="btn btn-danger btn-sm">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
                 </td>
             </tr>
         `;
     });
 }
 
+// Add these styles
+const styles = `
+    #stockTable {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+        background: white;
+    }
+
+    #stockTable thead {
+        background-color: rgb(20, 4, 80);
+    }
+
+    #stockTable th {
+        padding: 12px;
+        text-align: left;
+        font-weight: 600;
+        border-bottom: 2px solid #ddd;
+        color: white;
+    }
+
+    #stockTable td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+    }
+
+    .stock-image {
+        width: 50px;
+        height: 50px;
+        object-fit: cover;
+        border-radius: 4px;
+    }
+
+    .no-image {
+        width: 50px;
+        height: 50px;
+        background-color: rgb(38, 0, 206);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        color: white;
+        border-radius: 4px;
+    }
+
+    .profit-positive {
+        color: #4CAF50;
+        font-weight: bold;
+    }
+
+    .profit-negative {
+        color: #f44336;
+        font-weight: bold;
+    }
+
+    .btn-sm {
+        padding: 5px 10px;
+        margin: 0 2px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .btn-primary {
+        background-color: #2196F3;
+        color: white;
+    }
+
+    .btn-danger {
+        background-color: #f44336;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background-color: #1976D2;
+    }
+
+    .btn-danger:hover {
+        background-color: #D32F2F;
+    }
+
+    #stockTableContainer {
+        margin-top: 20px;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .fas {
+        font-size: 14px;
+    }
+`;
+
+// Add the styles to the document
+const styleSheet = document.createElement('style');
+styleSheet.textContent = styles;
+document.head.appendChild(styleSheet);
+
+// Update the addStock function to handle image upload
+function addStock() {
+    const productName = document.getElementById('productName').value.trim();
+    const category = document.getElementById('categorySelect').value;
+    const quantity = parseInt(document.getElementById('quantity').value);
+    const cost = parseFloat(document.getElementById('cost').value);
+    const price = parseFloat(document.getElementById('price').value);
+    const imageInput = document.getElementById('productImage');
+    
+    // Validation
+    if (!productName || !category || isNaN(quantity) || isNaN(cost) || isNaN(price)) {
+        alert('Please fill all fields with valid values!');
+        return;
+    }
+
+    // Handle image
+    const handleImageAndSave = (imageData = null) => {
+        // Create new stock item
+        const newItem = {
+            id: Date.now(),
+            name: productName,
+            category: category,
+            quantity: quantity,
+            cost: cost,
+            price: price,
+            image: imageData
+        };
+
+        // Add to inventory
+        inventory.push(newItem);
+
+        // Save to localStorage
+        saveToLocalStorage();
+
+        // Update displays
+        updateStockList();
+        updateProductSelect();
+
+        // Clear form
+        document.getElementById('productName').value = '';
+        document.getElementById('categorySelect').value = '';
+        document.getElementById('quantity').value = '';
+        document.getElementById('cost').value = '';
+        document.getElementById('price').value = '';
+        if (imageInput) imageInput.value = '';
+        document.getElementById('imagePreview').innerHTML = '';
+
+        // Show success message
+        alert('Stock added successfully!');
+    };
+
+    // If there's an image file, process it
+    if (imageInput && imageInput.files[0]) {
+        const reader = new FileReader();
+        reader.onload = (e) => handleImageAndSave(e.target.result);
+        reader.readAsDataURL(imageInput.files[0]);
+    } else {
+        handleImageAndSave();
+    }
+
+    // After successfully adding stock
+    saveInventory();
+    
+    // Refresh sales section if on employee dashboard
+    const employeeDashboard = document.getElementById('employeeDashboard');
+    if (employeeDashboard && employeeDashboard.style.display !== 'none') {
+        updateProductSelection();
+    }
+}
+
 // Add this helper function at the top of your script
 function formatGhanaCedis(amount) {
-    return new Intl.NumberFormat('en-GH', {
-        style: 'currency',
-        currency: 'GHS'
-    }).format(amount);
+    return 'GH₵ ' + amount.toFixed(2);
 }
 
 function clearAddStockForm() {
@@ -379,6 +1023,7 @@ function updateStockItem(itemId, imageData) {
 function deleteStock(itemId) {
     if (confirm('Are you sure you want to delete this item?')) {
         inventory = inventory.filter(item => item.id !== itemId);
+        saveToLocalStorage();
         updateStockList();
         showNotification('Stock deleted successfully!');
     }
@@ -602,75 +1247,82 @@ function updateUnitPrice() {
     }
 }
 
-// Add item to cart
+// Function to add item to cart
 function addToCart() {
     const productSelect = document.getElementById('productSelect');
-    const quantityInput = document.getElementById('sellQuantity');
-    
-    if (!productSelect.value) {
-        alert('Please select a product!');
-        return;
-    }
+    const quantityInput = document.getElementById('quantity');
     
     const productId = parseInt(productSelect.value);
-    const quantity = parseInt(quantityInput.value);
-    const product = inventory.find(item => item.id === productId);
-
-    if (!product) {
-        alert('Product not found!');
+    
+    if (!productId) {
+        alert('Please select a product');
         return;
     }
 
-    if (!quantity || quantity <= 0) {
-        alert('Please enter a valid quantity!');
+    const selectedOption = productSelect.options[productSelect.selectedIndex];
+    const available = parseInt(selectedOption.dataset.available);
+    const price = parseFloat(selectedOption.dataset.price);
+    const productName = selectedOption.dataset.name;
+
+    // Get quantity value
+    let quantity = parseInt(quantityInput.value);
+
+    // Set default quantity to 1 if input is empty or invalid
+    if (quantityInput.value.trim() === '' || isNaN(quantity) || quantity < 1) {
+        quantity = 1;
+        quantityInput.value = '1';
+    }
+
+    // Check stock availability
+    if (quantity > available) {
+        alert(`Only ${available} items available in stock`);
         return;
     }
 
-    if (quantity > product.quantity) {
-        alert('Insufficient stock!');
-        return;
-    }
-
-    // Check if product already in cart
+    // Check if item already in cart
     const existingItem = currentCart.find(item => item.productId === productId);
     if (existingItem) {
-        if (existingItem.quantity + quantity > product.quantity) {
-            alert('Insufficient stock!');
+        const newTotal = existingItem.quantity + quantity;
+        if (newTotal > available) {
+            alert(`Cannot add more items. Only ${available} available in stock`);
             return;
         }
-        existingItem.quantity += quantity;
+        existingItem.quantity = newTotal;
     } else {
         currentCart.push({
             productId,
-            productName: product.name,
-            quantity,
-            unitPrice: product.price
+            productName: productName,
+            quantity: quantity,
+            price: price,
+            total: quantity * price
         });
     }
 
+    // Update cart display
     updateCartDisplay();
-    quantityInput.value = '1'; // Reset quantity to 1
-    console.log('Current Cart:', currentCart); // For debugging
+    
+    // Reset only the product selection
+    productSelect.value = '';
 }
 
-// Update cart display
+// Function to update cart display
 function updateCartDisplay() {
     const cartItems = document.getElementById('cartItems');
     const cartTotal = document.getElementById('cartTotal');
-    if (!cartItems || !cartTotal) return; // Guard clause
-    
-    let total = 0;
+    if (!cartItems || !cartTotal) return;
+
     cartItems.innerHTML = '';
+    let total = 0;
 
     currentCart.forEach((item, index) => {
-        const itemTotal = item.quantity * item.unitPrice;
+        const itemTotal = item.quantity * item.price;
         total += itemTotal;
 
         cartItems.innerHTML += `
             <tr>
                 <td>${item.productName}</td>
                 <td>${item.quantity}</td>
-                <td>${formatGhanaCedis(item.unitPrice)}</td>
+                <td>${formatGhanaCedis(item.price)}</td>
                 <td>${formatGhanaCedis(itemTotal)}</td>
                 <td>
                     <button onclick="removeFromCart(${index})" class="delete-btn">
@@ -682,9 +1334,28 @@ function updateCartDisplay() {
     });
 
     cartTotal.textContent = formatGhanaCedis(total);
+    
+    // Update final total if it exists
+    const finalTotalElement = document.getElementById('finalTotal');
+    if (finalTotalElement) {
+        updateFinalTotal();
+    }
 }
 
-// Remove item from cart
+// Function to update final total
+function updateFinalTotal() {
+    const subtotal = calculateTotal();
+    const discount = parseFloat(document.getElementById('discount').value) || 0;
+    const finalTotal = subtotal - discount;
+    
+    document.getElementById('finalTotal').textContent = formatGhanaCedis(finalTotal);
+    
+    // Reset payment and change when total changes
+    document.getElementById('payment').value = '';
+    document.getElementById('changeAmount').textContent = formatGhanaCedis(0);
+}
+
+// Function to remove item from cart
 function removeFromCart(index) {
     currentCart.splice(index, 1);
     updateCartDisplay();
@@ -694,85 +1365,141 @@ function removeFromCart(index) {
 function clearCart() {
     currentCart = [];
     updateCartDisplay();
+    document.getElementById('customerName').value = '';
+    document.getElementById('customerPhone').value = '';
+    document.getElementById('discount').value = '';
+    document.getElementById('payment').value = '';
 }
 
 // Function to complete sale
 function completeSale() {
-    // Validate inputs
-    const customerName = document.getElementById('customerName').value;
-    const customerPhone = document.getElementById('customerPhone').value;
+    if (currentCart.length === 0) {
+        alert('Cart is empty!');
+        return;
+    }
 
+    const customerName = document.getElementById('customerName').value.trim();
     if (!customerName) {
         alert('Please enter customer name!');
         return;
     }
 
-    if (currentCart.length === 0) {
-        alert('Cart is empty! Please add items.');
-        return;
-    }
-
     try {
-        // Create sale record
-        const saleRecord = {
+        // Calculate totals
+        const subtotal = calculateTotal();
+        const discount = parseFloat(document.getElementById('discount').value) || 0;
+        const finalTotal = subtotal - discount;
+        const payment = parseFloat(document.getElementById('payment').value) || 0;
+
+        // Validate payment
+        if (payment < finalTotal) {
+            alert('Payment amount must be equal to or greater than the total amount!');
+            document.getElementById('payment').focus();
+            return;
+        }
+
+        // Load latest inventory data
+        const savedInventory = localStorage.getItem('inventory');
+        if (savedInventory) {
+            inventory = JSON.parse(savedInventory);
+        }
+
+        // Validate stock availability
+        for (const item of currentCart) {
+            const product = inventory.find(p => p.id === parseInt(item.productId));
+            if (!product) {
+                alert(`Product ${item.productName} not found in inventory!`);
+                return;
+            }
+            if (product.quantity < item.quantity) {
+                alert(`Not enough stock available for ${item.productName}. Only ${product.quantity} remaining.`);
+                return;
+            }
+        }
+
+        // Create sale object
+        const sale = {
             id: generateSaleId(),
-            date: new Date(),
+            invoiceNumber: generateInvoiceNumber(),
+            date: new Date().toISOString(),
+            cashier: currentUser,
             customer: {
                 name: customerName,
-                phone: customerPhone || 'N/A'
+                phone: document.getElementById('customerPhone').value || ''
             },
             items: currentCart.map(item => ({
-                productId: item.productId,
+                productId: parseInt(item.productId),
                 productName: item.productName,
                 quantity: item.quantity,
-                unitPrice: item.unitPrice,
-                total: item.quantity * item.unitPrice
+                price: item.price,
+                total: item.quantity * item.price
             })),
-            total: currentCart.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0),
-            employee: currentUser
+            subtotal,
+            discount,
+            total: finalTotal,
+            payment,
+            change: payment - finalTotal
         };
 
-        // Update inventory
+        // Update inventory quantities
         currentCart.forEach(item => {
-            const productIndex = inventory.findIndex(p => p.id === item.productId);
-            if (productIndex !== -1) {
-                inventory[productIndex].quantity -= item.quantity;
+            const product = inventory.find(p => p.id === parseInt(item.productId));
+            if (product) {
+                product.quantity -= item.quantity;
             }
         });
 
-        // Add to sales history
+        // Save updated inventory
+        localStorage.setItem('inventory', JSON.stringify(inventory));
+
+        // Initialize sales array if it doesn't exist
         if (!Array.isArray(sales)) {
             sales = [];
         }
-        sales.push(saleRecord);
+
+        // Add to sales history
+        sales.push(sale);
+        localStorage.setItem('sales', JSON.stringify(sales));
 
         // Print receipt
-        printSaleReceipt(saleRecord);
+        if (typeof printReceipt === 'function') {
+            printReceipt(sale);
+        }
 
-        // Clear form and cart
-        resetSaleForm();
+        // Clear cart and form
+        clearCart();
+        
+        // Reset payment fields
+        document.getElementById('discount').value = '0';
+        document.getElementById('payment').value = '0';
+        document.getElementById('finalTotal').textContent = 'GH₵ 0.00';
+        document.getElementById('changeAmount').textContent = 'GH₵ 0.00';
 
+        // Update product selection dropdown
+        updateProductSelection();
+        
         // Show success message
-        showSuccessMessage('Sale completed successfully!');
+        alert('Sale completed successfully!');
 
-        // Update displays
-        updateStockList();
-        updateSalesHistory();
+        // Update sales history if visible
+        if (document.getElementById('salesHistory').style.display === 'block') {
+            filterEmployeeSales();
+        }
 
-        return true;
     } catch (error) {
-        console.error('Sale completion error:', error);
-        alert('Error completing sale: ' + error.message);
-        return false;
+        console.error('Error completing sale:', error);
+        alert(`Error completing sale: ${error.message}`);
     }
 }
 
-// Function to reset sale form
-function resetSaleForm() {
-    document.getElementById('customerName').value = '';
-    document.getElementById('customerPhone').value = '';
-    currentCart = [];
-    updateCartDisplay();
+// Helper function to calculate total
+function calculateTotal() {
+    return currentCart.reduce((sum, item) => sum + (item.quantity * item.price), 0);
+}
+
+// Function to generate sale ID
+function generateSaleId() {
+    return 'SALE-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
 }
 
 // Function to show success message
@@ -995,8 +1722,6 @@ function printSaleReceipt(saleData) {
     printWindow.document.close();
 }
 
-// Add these styles to your CSS 
-
 // Add these functions for admin dashboard
 function initializeAdminDashboard() {
     // Initialize empty categories if not exists
@@ -1100,10 +1825,10 @@ function filterSales() {
     const filteredSales = sales.filter(sale => {
         const saleDate = new Date(sale.date).toISOString().split('T')[0];
         return (!date || saleDate === date) &&
-               (!searchTerm || sale.customer.name.toLowerCase().includes(searchTerm));
+            (!searchTerm || sale.customer.name.toLowerCase().includes(searchTerm));
     });
 
-    displaySalesHistory(filteredSales);
+    displayFilteredStock(filteredSales);
 }
 
 // Display sales history
@@ -1216,9 +1941,11 @@ function getWeekNumber(date) {
     return `${d.getUTCFullYear()}-W${Math.ceil((((d - yearStart) / 86400000) + 1)/7)}`;
 }
 
+// Function to generate invoice number
 function generateInvoiceNumber() {
-    return 'INV-' + Date.now().toString().slice(-6) + '-' + 
-           Math.random().toString(36).substring(2, 5).toUpperCase();
+    const timestamp = new Date().getTime();
+    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    return `INV-${timestamp}-${random}`;
 }
 
 // Optional: Add charts for visual representation
@@ -1229,12 +1956,23 @@ function updateReportCharts(sales) {
     }
 }
 
-// Add these functions to your existing JavaScript
-
 // Function to initialize user management
 function initializeUserManagement() {
+    // Convert users object to array for display
+    const userArray = Object.entries(users).map(([username, userData]) => ({
+        id: Date.now(), // Generate temporary ID
+        username: username,
+        role: userData.role,
+        status: userData.status || 'active',
+        fullName: userData.fullName || username,
+        lastLogin: userData.lastLogin || 'Never'
+    }));
+
+    // Update the employees array with users
+    employees = userArray;
+    
+    // Update the display
     updateUserList();
-    setupPasswordChangeHandlers();
 }
 
 // Function to update user list
@@ -1244,21 +1982,175 @@ function updateUserList() {
 
     userList.innerHTML = '';
     
-    Object.entries(users).forEach(([username, userData]) => {
+    // Display all users
+    employees.forEach(employee => {
+        const isCurrentUser = employee.username === currentUser;
+        const statusClass = employee.status === 'active' ? 'status-active' : 'status-inactive';
+        const isAdminUser = employee.role === 'admin';
+        const canModify = currentUserRole === 'admin' && !isCurrentUser;
+        
         userList.innerHTML += `
-            <tr>
-                <td>${username}</td>
-                <td>${userData.role}</td>
-                <td>${userData.lastLogin ? new Date(userData.lastLogin).toLocaleString() : 'Never'}</td>
-                <td class="user-actions">
-                    <button onclick="openPasswordModal('${username}')" 
-                            class="change-password-btn">
-                        Change Password
-                    </button>
+            <tr class="${isAdminUser ? 'admin-row' : ''}">
+                <td>${employee.username}</td>
+                <td>${employee.fullName}</td>
+                <td>
+                    <span class="role-badge role-${employee.role}">
+                        ${getRoleDisplay(employee.role)}
+                    </span>
+                </td>
+                <td>
+                    <span class="status-badge ${statusClass}">
+                        ${employee.status}
+                    </span>
+                </td>
+                <td>${employee.lastLogin}</td>
+                <td class="action-buttons">
+                    ${canModify ? `
+                        <button onclick="editEmployee(${employee.id})" class="btn-primary btn-sm">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                        <button onclick="toggleEmployeeStatus(${employee.id})" class="btn-warning btn-sm">
+                            ${employee.status === 'active' ? 'Deactivate' : 'Activate'}
+                        </button>
+                        <button onclick="resetPassword(${employee.id})" class="btn-info btn-sm">
+                            <i class="fas fa-key"></i> Reset Password
+                        </button>
+                        ${!isAdminUser ? `
+                            <button onclick="deleteEmployee(${employee.id})" class="btn-danger btn-sm">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                        ` : ''}
+                    ` : '<span class="current-user-label">Current User</span>'}
                 </td>
             </tr>
         `;
     });
+}
+
+// Helper function to get role display name
+function getRoleDisplay(role) {
+    switch(role) {
+        case 'admin':
+            return 'Administrator';
+        case 'selling':
+            return 'Sales Person';
+        case 'account':
+            return 'Accountant';
+        default:
+            return role.charAt(0).toUpperCase() + role.slice(1);
+    }
+}
+
+// Add this to your initialization code
+document.addEventListener('DOMContentLoaded', function() {
+    if (document.getElementById('userManagement')) {
+        initializeUserManagement();
+    }
+});
+
+// Function to reset password
+function resetPassword(employeeId) {
+    if (!checkAdminPermissions()) return;
+    
+    const employee = employees.find(emp => emp.id === employeeId);
+    if (!employee) {
+        alert('Employee not found!');
+        return;
+    }
+
+    // Create and show password reset modal
+    createPasswordResetModal();
+    
+    // Set employee details in modal
+    document.getElementById('resetEmployeeId').value = employeeId;
+    document.getElementById('resetEmployeeName').textContent = employee.username;
+    
+    // Show modal
+    document.getElementById('passwordResetModal').style.display = 'block';
+}
+
+// Function to create password reset modal
+function createPasswordResetModal() {
+    // Only create if it doesn't exist
+    if (!document.getElementById('passwordResetModal')) {
+        const modalHtml = `
+            <div id="passwordResetModal" class="modal">
+                <div class="modal-content">
+                    <span class="close-modal" onclick="closePasswordResetModal()">&times;</span>
+                    <h3>Reset Password</h3>
+                    <form id="passwordResetForm" onsubmit="submitPasswordReset(event)">
+                        <input type="hidden" id="resetEmployeeId">
+                        <div class="form-group">
+                            <label>Employee Username:</label>
+                            <p id="resetEmployeeName" class="employee-name"></p>
+                        </div>
+                        <div class="form-group">
+                            <label for="newPassword">New Password*</label>
+                            <input type="password" id="newPassword" required minlength="6">
+                        </div>
+                        <div class="form-group">
+                            <label for="confirmPassword">Confirm Password*</label>
+                            <input type="password" id="confirmPassword" required minlength="6">
+                        </div>
+                        <div class="password-requirements">
+                            <p>Password Requirements:</p>
+                            <ul>
+                                <li>Minimum 6 characters</li>
+                                <li>Both passwords must match</li>
+                            </ul>
+                        </div>
+                        <div class="modal-buttons">
+                            <button type="submit" class="save-btn">Reset Password</button>
+                            <button type="button" class="cancel-btn" onclick="closePasswordResetModal()">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+    }
+}
+
+// Function to submit password reset
+function submitPasswordReset(event) {
+    event.preventDefault();
+    
+    const employeeId = parseInt(document.getElementById('resetEmployeeId').value);
+    const newPassword = document.getElementById('newPassword').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    
+    // Validate passwords
+    if (newPassword !== confirmPassword) {
+        alert('Passwords do not match!');
+        return;
+    }
+
+    if (newPassword.length < 6) {
+        alert('Password must be at least 6 characters long!');
+        return;
+    }
+
+    const employee = employees.find(emp => emp.id === employeeId);
+    if (employee) {
+        // Update password
+        employee.password = newPassword;
+        saveEmployees();
+        
+        // Close modal and show success message
+        closePasswordResetModal();
+        alert(`Password has been reset successfully for ${employee.username}`);
+    } else {
+        alert('Employee not found!');
+    }
+}
+
+// Function to close password reset modal
+function closePasswordResetModal() {
+    const modal = document.getElementById('passwordResetModal');
+    if (modal) {
+        modal.style.display = 'none';
+        document.getElementById('passwordResetForm').reset();
+    }
 }
 
 // Function to open password change modal
@@ -1492,8 +2384,11 @@ function updateProfitChart() {
 
 // Function to initialize employee management
 function initializeEmployeeManagement() {
+    const savedEmployees = localStorage.getItem('employees');
+    if (savedEmployees) {
+        employees = JSON.parse(savedEmployees);
+    }
     updateEmployeeList();
-    setupEmployeeFormHandlers();
 }
 
 // Function to open add employee modal
@@ -1564,101 +2459,12 @@ function validateEmployeeForm() {
     return isValid;
 }
 
-// Function to add new employee
-function addEmployee() {
-    const newEmployee = {
-        id: generateEmployeeId(),
-        fullName: document.getElementById('empFullName').value,
-        username: document.getElementById('empUsername').value,
-        password: document.getElementById('empPassword').value,
-        phone: document.getElementById('empPhone').value,
-        email: document.getElementById('empEmail').value,
-        role: document.getElementById('empRole').value,
-        status: document.getElementById('empStatus').value,
-        dateAdded: new Date().toISOString(),
-        lastLogin: null
-    };
-
-    employees.push(newEmployee);
-    
-    // Add to users object for login functionality
-    users[newEmployee.username] = {
-        password: newEmployee.password,
-        role: newEmployee.role
-    };
-
-    updateEmployeeList();
-    closeAddEmployeeModal();
-    showNotification('Employee added successfully!');
-}
-
-// Function to update employee list
-function updateEmployeeList() {
-    const employeeList = document.getElementById('employeeList');
-    if (!employeeList) return;
-
-    employeeList.innerHTML = '';
-    
-    employees.forEach(emp => {
-        employeeList.innerHTML += `
-            <tr>
-                <td>${emp.id}</td>
-                <td>${emp.fullName}</td>
-                <td>${emp.username}</td>
-                <td>${emp.phone || 'N/A'}</td>
-                <td>${emp.role}</td>
-                <td>
-                    <span class="employee-status status-${emp.status}">
-                        ${emp.status}
-                    </span>
-                </td>
-                <td class="employee-actions">
-                    <button onclick="editEmployee('${emp.id}')" class="edit-employee-btn">
-                        Edit
-                    </button>
-                    <button onclick="deleteEmployee('${emp.id}')" class="delete-employee-btn">
-                        Delete
-                    </button>
-                </td>
-            </tr>
-        `;
-    });
-}
-
-// Function to generate employee ID
-function generateEmployeeId() {
-    return 'EMP' + Date.now().toString().slice(-6);
-}
-
-// Function to show error message
-function showError(inputId, message) {
-    const input = document.getElementById(inputId);
-    const formGroup = input.closest('.form-group');
-    
-    formGroup.classList.add('error');
-    
-    const errorDiv = document.createElement('div');
-    errorDiv.className = 'error-message';
-    errorDiv.textContent = message;
-    
-    formGroup.appendChild(errorDiv);
-}
-
-// Function to clear errors
-function clearErrors() {
-    const errorMessages = document.querySelectorAll('.error-message');
-    const errorInputs = document.querySelectorAll('.form-group.error');
-    
-    errorMessages.forEach(error => error.remove());
-    errorInputs.forEach(input => input.classList.remove('error'));
-}
-
 // Function to delete employee
-function deleteEmployee(employeeId) {
+function deleteEmployee(username) {
     if (confirm('Are you sure you want to delete this employee?')) {
-        const index = employees.findIndex(emp => emp.id === employeeId);
+        const index = employees.findIndex(emp => emp.username === username);
         if (index !== -1) {
-            const username = employees[index].username;
+            const employee = employees[index];
             employees.splice(index, 1);
             delete users[username];
             updateEmployeeList();
@@ -1696,61 +2502,801 @@ function saveInventory() {
     localStorage.setItem('inventory', JSON.stringify(inventory));
 }
 
-// Update the addStock function to save inventory
-function addStock() {
-    const productName = document.getElementById('productName').value.trim();
-    const category = document.getElementById('categorySelect').value;
-    const quantity = parseInt(document.getElementById('quantity').value);
-    const price = parseFloat(document.getElementById('price').value);
-    const cost = parseFloat(document.getElementById('cost').value);
-
-    // Validation
-    if (!productName || !category || isNaN(quantity) || isNaN(price) || isNaN(cost)) {
-        alert('Please fill all fields with valid values!');
-        return;
-    }
-
-    // Create new stock item
-    const newItem = {
-        id: inventory.length + 1,
-        name: productName,
-        category: category,
-        quantity: quantity,
-        price: price,
-        cost: cost
-    };
-
-    // Add to inventory
-    inventory.push(newItem);
-
-    // Save to localStorage
+// Function to save data to localStorage
+function saveToLocalStorage() {
     localStorage.setItem('inventory', JSON.stringify(inventory));
+    localStorage.setItem('categories', JSON.stringify(categories));
+}
 
-    // Update displays
-    updateStockList();
-    updateProductSelect();
-
-    // Clear form
-    document.getElementById('productName').value = '';
-    document.getElementById('categorySelect').value = '';
-    document.getElementById('quantity').value = '';
-    document.getElementById('price').value = '';
-    document.getElementById('cost').value = '';
-
-    // Show success message
-    alert('Stock added successfully!');
+// Function to load data from localStorage
+function loadFromLocalStorage() {
+    const savedInventory = localStorage.getItem('inventory');
+    const savedCategories = localStorage.getItem('categories');
+    
+    if (savedInventory) {
+        inventory = JSON.parse(savedInventory);
+    }
+    if (savedCategories) {
+        categories = JSON.parse(savedCategories);
+    }
 }
 
 // Document ready function
 document.addEventListener('DOMContentLoaded', function() {
-    // Load saved data
-    const savedCategories = localStorage.getItem('categories');
-    const savedInventory = localStorage.getItem('inventory');
-    
-    if (savedCategories) {
-        categories = JSON.parse(savedCategories);
+    loadFromLocalStorage();
+});
+
+// Function to check permissions based on role
+function canSellGoods(role) {
+    return role === 'selling'; // Only 'selling' role can sell goods
+}
+
+// Example function to sell goods
+function sellGoods(employeeUsername) {
+    const employee = employees.find(emp => emp.username === employeeUsername);
+    if (employee) {
+        if (canSellGoods(employee.role)) {
+            // Logic to sell goods
+            alert(`${employee.username} is allowed to sell goods.`);
+        } else {
+            alert(`${employee.username} does not have permission to sell goods.`);
+        }
     }
+}
+
+// Function to log in an employee
+function loginEmployee() {
+    const username = document.getElementById('loginUsername').value.trim();
+    const password = document.getElementById('loginPassword').value;
+
+    // Load employees from local storage
+    loadEmployees();
+
+    // Check if the employee exists
+    const employee = employees.find(emp => emp.username === username && emp.password === password);
+    if (employee) {
+        alert(`Welcome, ${employee.username}!`);
+        // Redirect based on role
+        if (employee.role === 'account') {
+            window.location.href = 'accounting.html'; // Redirect to accounting page
+        } else {
+            window.location.href = 'employeeDashboard.html'; // Redirect to employee dashboard
+        }
+    } else {
+        alert('Invalid username or password. Please try again.');
+    }
+}
+
+// Add function to delete user
+function deleteUser(username) {
+    if (username === currentUser) {
+        alert("You cannot delete your own account!");
+        return;
+    }
+
+    if (confirm(`Are you sure you want to delete user "${username}"?`)) {
+        // Remove from users object
+        delete users[username];
+        
+        // Remove from employees array if exists
+        const employeeIndex = employees.findIndex(emp => emp.username === username);
+        if (employeeIndex !== -1) {
+            employees.splice(employeeIndex, 1);
+            // Update employees in localStorage
+            localStorage.setItem('employees', JSON.stringify(employees));
+        }
+        
+        // Update the display
+        updateUserList();
+        
+        // Also update employee list if it's visible
+        if (document.getElementById('employeeList')) {
+            updateEmployeeList();
+        }
+        
+        alert(`User "${username}" has been deleted successfully.`);
+    }
+}
+
+// Add this function to check if current user is admin
+function isAdmin() {
+    return currentUserRole === 'admin';
+}
+
+// Add this function to check admin permissions
+function checkAdminPermissions() {
+    if (!isAdmin()) {
+        alert('Only administrators can perform this action!');
+        return false;
+    }
+    return true;
+}
+
+// Function to initialize employee dashboard
+function initializeEmployeeDashboard() {
+    document.getElementById('employeeName').textContent = currentUser;
+    
+    // Load necessary data
+    loadSalesData();
+    loadCategories();
+    loadInventory();
+    
+    // Initialize sale section
+    initializeSaleSection();
+    
+    // Initialize event listeners
+    initializeEventListeners();
+}
+
+// Function to initialize event listeners
+function initializeEventListeners() {
+    // Add event listeners for inventory filters
+    const productSearch = document.getElementById('productSearch');
+    const categoryFilter = document.getElementById('categoryFilter');
+    const stockFilter = document.getElementById('stockFilter');
+    
+    if (productSearch) {
+        productSearch.addEventListener('keyup', filterProducts);
+    }
+    
+    if (categoryFilter) {
+        categoryFilter.addEventListener('change', filterProducts);
+    }
+    
+    if (stockFilter) {
+        stockFilter.addEventListener('change', filterProducts);
+    }
+
+    // Sales history button
+    const salesHistoryBtn = document.querySelector('button[onclick="showSection(\'salesHistory\')"]');
+    if (salesHistoryBtn) {
+        salesHistoryBtn.addEventListener('click', function() {
+            showSection('salesHistory');
+        });
+    }
+
+    // Other buttons...
+}
+
+// Function to update inventory view
+function updateInventoryView() {
+    const inventoryList = document.getElementById('inventoryList');
+    if (!inventoryList) return;
+
+    // Load latest inventory data
+    const savedInventory = localStorage.getItem('inventory');
     if (savedInventory) {
         inventory = JSON.parse(savedInventory);
     }
-}); 
+
+    inventoryList.innerHTML = '';
+    inventory.forEach(product => {
+        const stockStatus = getStockStatus(product.quantity);
+        inventoryList.innerHTML += `
+            <tr class="stock-${stockStatus.toLowerCase()}">
+                <td>
+                    ${product.image ? 
+                        `<img src="${product.image}" alt="${product.name}" class="product-thumbnail">` :
+                        '<div class="no-image">No Image</div>'
+                    }
+                </td>
+                <td>${product.name}</td>
+                <td>${product.category || 'Uncategorized'}</td>
+                <td>${product.quantity}</td>
+                <td>${formatGhanaCedis(product.price)}</td>
+                <td>
+                    <span class="stock-badge ${stockStatus.toLowerCase()}">
+                        ${stockStatus}
+                    </span>
+                </td>
+            </tr>
+        `;
+    });
+}
+
+// Function to get stock status
+function getStockStatus(quantity) {
+    if (quantity <= 0) return 'Out of Stock';
+    if (quantity <= 5) return 'Low Stock';
+    return 'In Stock';
+}
+
+// Function to update category filter
+function updateCategoryFilter() {
+    const categoryFilter = document.getElementById('categoryFilter');
+    if (!categoryFilter) return;
+
+    categoryFilter.innerHTML = '<option value="">All Categories</option>';
+    categories.forEach(category => {
+        categoryFilter.innerHTML += `<option value="${category}">${category}</option>`;
+    });
+}
+
+// Function to filter employee sales
+function filterEmployeeSales() {
+    const date = document.getElementById('salesDate').value;
+    const searchTerm = document.getElementById('searchCustomer').value.toLowerCase();
+    
+    // Filter sales for current employee only
+    const employeeSales = sales.filter(sale => {
+        const saleDate = new Date(sale.date).toISOString().split('T')[0];
+        const matchesDate = !date || saleDate === date;
+        const matchesSearch = !searchTerm || 
+            sale.customer.name.toLowerCase().includes(searchTerm);
+        const matchesEmployee = sale.cashier === currentUser;
+        
+        return matchesDate && matchesSearch && matchesEmployee;
+    });
+
+    updateSalesSummary(employeeSales);
+    displayEmployeeSales(employeeSales);
+}
+
+// Function to update sales summary
+function updateSalesSummary(filteredSales) {
+    const totalAmount = filteredSales.reduce((sum, sale) => sum + sale.total, 0);
+    const totalItems = filteredSales.reduce((sum, sale) => 
+        sum + sale.items.reduce((itemSum, item) => itemSum + item.quantity, 0), 0);
+    const averageAmount = filteredSales.length > 0 ? totalAmount / filteredSales.length : 0;
+
+    document.getElementById('todaySalesCount').textContent = 
+        `${filteredSales.length} Sale${filteredSales.length !== 1 ? 's' : ''}`;
+    document.getElementById('todaySalesAmount').textContent = 
+        formatGhanaCedis(totalAmount);
+    document.getElementById('todayItemsSold').textContent = 
+        `${totalItems} Item${totalItems !== 1 ? 's' : ''}`;
+    document.getElementById('averageSaleAmount').textContent = 
+        formatGhanaCedis(averageAmount);
+}
+
+// Function to display employee sales
+function displayEmployeeSales(salesData) {
+    const salesHistory = document.getElementById('salesHistoryData');
+    if (!salesHistory) return;
+
+    salesHistory.innerHTML = '';
+    
+    salesData.forEach(sale => {
+        const saleTime = new Date(sale.date).toLocaleTimeString();
+        const itemsCount = sale.items.reduce((sum, item) => sum + item.quantity, 0);
+        
+        salesHistory.innerHTML += `
+            <tr>
+                <td>${saleTime}</td>
+                <td>${sale.invoiceNumber}</td>
+                <td>${sale.customer.name}</td>
+                <td>${itemsCount} items</td>
+                <td>${formatGhanaCedis(sale.total)}</td>
+                <td>${formatGhanaCedis(sale.payment)}</td>
+                <td class="action-buttons">
+                    <button onclick="viewSaleDetails('${sale.id}')" class="btn-primary btn-sm">
+                        View Details
+                    </button>
+                    <button onclick="printReceipt(${JSON.stringify(sale)})" class="btn-secondary btn-sm">
+                        Print Receipt
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+}
+
+// Function to view sale details
+function viewSaleDetails(saleId) {
+    const sale = sales.find(s => s.id === saleId);
+    if (!sale) return;
+
+    currentSaleDetails = sale;
+    const modal = document.getElementById('saleDetailsModal');
+    const content = document.getElementById('saleDetailsContent');
+
+    content.innerHTML = `
+        <div class="sale-details">
+            <div class="sale-header">
+                <p><strong>Invoice #:</strong> ${sale.invoiceNumber}</p>
+                <p><strong>Date:</strong> ${formatDate(sale.date)}</p>
+                <p><strong>Time:</strong> ${formatTime(sale.date)}</p>
+            </div>
+            
+            <div class="customer-details">
+                <p><strong>Customer:</strong> ${sale.customer.name}</p>
+                ${sale.customer.phone ? `<p><strong>Phone:</strong> ${sale.customer.phone}</p>` : ''}
+            </div>
+
+            <table class="items-table">
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th>Quantity</th>
+                        <th>Price</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${sale.items.map(item => `
+                        <tr>
+                            <td>${item.name}</td>
+                            <td>${item.quantity}</td>
+                            <td>${formatGhanaCedis(item.price)}</td>
+                            <td>${formatGhanaCedis(item.quantity * item.price)}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+
+            <div class="sale-totals">
+                <p><strong>Subtotal:</strong> ${formatGhanaCedis(sale.subtotal)}</p>
+                ${sale.discount ? `<p><strong>Discount:</strong> ${formatGhanaCedis(sale.discount)}</p>` : ''}
+                <p><strong>Total:</strong> ${formatGhanaCedis(sale.total)}</p>
+                <p><strong>Payment:</strong> ${formatGhanaCedis(sale.payment)}</p>
+                <p><strong>Change:</strong> ${formatGhanaCedis(sale.payment - sale.total)}</p>
+            </div>
+        </div>
+    `;
+
+    modal.style.display = 'block';
+}
+
+// Initialize sales history when showing the section
+function initializeSalesHistory() {
+    // Set today's date as default
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('salesDate').value = today;
+    
+    // Load sales data from localStorage
+    loadSalesData();
+    
+    // Filter and display sales
+    filterEmployeeSales();
+}
+
+// Function to load sales data
+function loadSalesData() {
+    const savedSales = localStorage.getItem('sales');
+    if (savedSales) {
+        sales = JSON.parse(savedSales);
+    }
+}
+
+// Function to format date
+function formatDate(dateString) {
+    return new Date(dateString).toLocaleDateString('en-GH', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+    });
+}
+
+// Function to format time
+function formatTime(dateString) {
+    return new Date(dateString).toLocaleTimeString('en-GH', {
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+// Function to filter products for employee view
+function filterProducts() {
+    const searchTerm = document.getElementById('productSearch').value.toLowerCase();
+    const categoryFilter = document.getElementById('categoryFilter').value;
+    const stockFilter = document.getElementById('stockFilter').value;
+    const inventoryList = document.getElementById('inventoryList');
+    
+    if (!inventoryList) return;
+
+    // Load latest inventory data
+    const savedInventory = localStorage.getItem('inventory');
+    if (savedInventory) {
+        inventory = JSON.parse(savedInventory);
+    }
+
+    const filteredProducts = inventory.filter(product => {
+        // Apply search filter
+        const matchesSearch = product.name.toLowerCase().includes(searchTerm);
+        
+        // Apply category filter
+        const matchesCategory = !categoryFilter || product.category === categoryFilter;
+        
+        // Apply stock filter
+        let matchesStock = true;
+        if (stockFilter === 'low') {
+            matchesStock = product.quantity > 0 && product.quantity <= 5;
+        } else if (stockFilter === 'out') {
+            matchesStock = product.quantity <= 0;
+        }
+
+        return matchesSearch && matchesCategory && matchesStock;
+    });
+
+    displayFilteredProducts(filteredProducts);
+}
+
+// Function to display filtered products
+function displayFilteredProducts(products) {
+    const inventoryList = document.getElementById('inventoryList');
+    if (!inventoryList) return;
+
+    inventoryList.innerHTML = '';
+    
+    products.forEach(product => {
+        const stockStatus = getStockStatus(product.quantity);
+        inventoryList.innerHTML += `
+            <tr class="stock-${stockStatus.toLowerCase().replace(' ', '-')}">
+                <td>
+                    ${product.image ? 
+                        `<img src="${product.image}" alt="${product.name}" class="product-thumbnail">` :
+                        '<div class="no-image">No Image</div>'
+                    }
+                </td>
+                <td>${product.name}</td>
+                <td>${product.category || 'Uncategorized'}</td>
+                <td>${product.quantity}</td>
+                <td>${formatGhanaCedis(product.price)}</td>
+                <td>
+                    <span class="stock-badge ${stockStatus.toLowerCase().replace(' ', '-')}">
+                        ${stockStatus}
+                    </span>
+                </td>
+            </tr>
+        `;
+    });
+}
+
+// Function to initialize inventory view
+function initializeInventoryView() {
+    // Load latest inventory data
+    const savedInventory = localStorage.getItem('inventory');
+    if (savedInventory) {
+        inventory = JSON.parse(savedInventory);
+    }
+
+    // Load categories
+    const savedCategories = localStorage.getItem('categories');
+    if (savedCategories) {
+        categories = JSON.parse(savedCategories);
+    }
+
+    // Update category filter
+    updateCategoryFilter();
+    
+    // Display all products initially
+    displayInventory();
+}
+
+// Function to display inventory
+function displayInventory() {
+    const stockList = document.getElementById('stockList');
+    if (!stockList) return;
+
+    stockList.innerHTML = '';
+    
+    inventory.forEach(product => {
+        const profitMargin = calculateProfitMargin(product.cost, product.price);
+        
+        stockList.innerHTML += `
+            <tr>
+                <td>
+                    ${product.image ? 
+                        `<img src="${product.image}" alt="${product.name}" class="product-thumbnail">` :
+                        '<div class="no-image">No Image</div>'
+                    }
+                </td>
+                <td>${product.name}</td>
+                <td>${product.category || 'Uncategorized'}</td>
+                <td>${product.quantity}</td>
+                <td>${formatGhanaCedis(product.cost)}</td>
+                <td>${formatGhanaCedis(product.price)}</td>
+                <td>${profitMargin}%</td>
+                <td class="action-buttons">
+                    <button onclick="editStock(${product.id})" class="btn-primary btn-sm">
+                        <i class="fas fa-edit"></i> Edit
+                    </button>
+                    <button onclick="deleteStock(${product.id})" class="btn-danger btn-sm">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+}
+
+// Function to filter stock
+function filterStock() {
+    const searchInput = document.getElementById('stockSearch');
+    const categorySelect = document.getElementById('filterCategory');
+    const stockList = document.getElementById('stockList');
+    
+    if (!stockList) return;
+
+    const searchTerm = searchInput.value.toLowerCase();
+    const selectedCategory = categorySelect.value;
+
+    stockList.innerHTML = '';
+    
+    inventory.forEach(product => {
+        if (
+            (searchTerm === '' || product.name.toLowerCase().includes(searchTerm)) &&
+            (selectedCategory === '' || product.category === selectedCategory)
+        ) {
+            const profitMargin = calculateProfitMargin(product.cost, product.price);
+            
+            stockList.innerHTML += `
+                <tr>
+                    <td>
+                        ${product.image ? 
+                            `<img src="${product.image}" alt="${product.name}" class="product-thumbnail">` :
+                            '<div class="no-image">No Image</div>'
+                        }
+                    </td>
+                    <td>${product.name}</td>
+                    <td>${product.category || 'Uncategorized'}</td>
+                    <td>${product.quantity}</td>
+                    <td>${formatGhanaCedis(product.cost)}</td>
+                    <td>${formatGhanaCedis(product.price)}</td>
+                    <td>${profitMargin}%</td>
+                    <td class="action-buttons">
+                        <button onclick="editStock(${product.id})" class="btn-primary btn-sm">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                        <button onclick="deleteStock(${product.id})" class="btn-danger btn-sm">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }
+    });
+}
+
+// Helper function to calculate profit margin
+function calculateProfitMargin(cost, price) {
+    if (!cost || cost === 0) return 0;
+    return Math.round(((price - cost) / cost) * 100);
+}
+
+// Function to update category filter
+function updateCategoryFilter() {
+    const categoryFilter = document.getElementById('filterCategory');
+    if (!categoryFilter) return;
+
+    categoryFilter.innerHTML = '<option value="">All Categories</option>';
+    categories.forEach(category => {
+        categoryFilter.innerHTML += `
+            <option value="${category}">${category}</option>
+        `;
+    });
+}
+
+// Update any function that modifies inventory
+function updateStock(productId, newQuantity) {
+    const product = inventory.find(p => p.id === productId);
+    if (product) {
+        product.quantity = newQuantity;
+        saveInventory();
+    }
+}
+
+// Function to initialize sale section
+function initializeSaleSection() {
+    // Load latest inventory
+    const savedInventory = localStorage.getItem('inventory');
+    if (savedInventory) {
+        inventory = JSON.parse(savedInventory);
+    }
+
+    // Update product selection dropdown
+    updateProductSelection();
+    
+    // Clear current cart
+    currentCart = [];
+    updateCartDisplay();
+}
+
+// Function to update product selection dropdown
+function updateProductSelection() {
+    const productSelect = document.getElementById('productSelect');
+    if (!productSelect) return;
+
+    productSelect.innerHTML = '<option value="">Select Product</option>';
+    
+    // Filter only in-stock products
+    const availableProducts = inventory.filter(product => product.quantity > 0);
+    
+    availableProducts.forEach(product => {
+        productSelect.innerHTML += `
+            <option value="${product.id}" 
+                    data-price="${product.price}"
+                    data-available="${product.quantity}"
+                    data-name="${product.name}">
+                ${product.name} (${product.quantity} in stock) - ${formatGhanaCedis(product.price)}
+            </option>
+        `;
+    });
+}
+
+// Function to calculate change
+function calculateChange() {
+    const finalTotal = calculateTotal() - (parseFloat(document.getElementById('discount').value) || 0);
+    const payment = parseFloat(document.getElementById('payment').value) || 0;
+    const change = payment - finalTotal;
+    
+    document.getElementById('changeAmount').textContent = formatGhanaCedis(Math.max(0, change));
+    
+    // Highlight payment field if insufficient
+    const paymentInput = document.getElementById('payment');
+    if (payment < finalTotal) {
+        paymentInput.classList.add('invalid-payment');
+    } else {
+        paymentInput.classList.remove('invalid-payment');
+    }
+}
+
+// Function to initialize reports
+function initializeReports() {
+    // Set default dates
+    setDefaultDates();
+    // Generate initial report
+    generateReport();
+}
+
+// Function to set default dates
+function setDefaultDates() {
+    const today = new Date();
+    const startDate = document.getElementById('startDate');
+    const endDate = document.getElementById('endDate');
+    
+    // Set end date to today
+    endDate.value = today.toISOString().split('T')[0];
+    
+    // Set start date based on report type
+    const reportType = document.getElementById('reportType').value;
+    switch(reportType) {
+        case 'daily':
+            startDate.value = today.toISOString().split('T')[0];
+            break;
+        case 'weekly':
+            const lastWeek = new Date(today.setDate(today.getDate() - 7));
+            startDate.value = lastWeek.toISOString().split('T')[0];
+            break;
+        case 'monthly':
+            const lastMonth = new Date(today.setMonth(today.getMonth() - 1));
+            startDate.value = lastMonth.toISOString().split('T')[0];
+            break;
+        case 'yearly':
+            const lastYear = new Date(today.setFullYear(today.getFullYear() - 1));
+            startDate.value = lastYear.toISOString().split('T')[0];
+            break;
+    }
+}
+
+// Function to generate report
+function generateReport() {
+    const startDate = new Date(document.getElementById('startDate').value);
+    const endDate = new Date(document.getElementById('endDate').value);
+    endDate.setHours(23, 59, 59); // Include the entire end date
+
+    // Load sales data
+    const savedSales = localStorage.getItem('sales');
+    const sales = savedSales ? JSON.parse(savedSales) : [];
+
+    // Filter sales within date range
+    const filteredSales = sales.filter(sale => {
+        const saleDate = new Date(sale.date);
+        return saleDate >= startDate && saleDate <= endDate;
+    });
+
+    // Calculate summary
+    const summary = {
+        totalSales: filteredSales.length,
+        totalRevenue: filteredSales.reduce((sum, sale) => sum + sale.total, 0),
+        totalItems: filteredSales.reduce((sum, sale) => 
+            sum + sale.items.reduce((itemSum, item) => itemSum + item.quantity, 0), 0),
+        averageSale: filteredSales.length > 0 ? 
+            filteredSales.reduce((sum, sale) => sum + sale.total, 0) / filteredSales.length : 0
+    };
+
+    // Update summary display
+    document.getElementById('totalSales').textContent = summary.totalSales;
+    document.getElementById('totalRevenue').textContent = formatGhanaCedis(summary.totalRevenue);
+    document.getElementById('totalItems').textContent = summary.totalItems;
+    document.getElementById('averageSale').textContent = formatGhanaCedis(summary.averageSale);
+
+    // Generate detailed report
+    const reportTable = document.getElementById('reportTable');
+    reportTable.innerHTML = `
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Invoice #</th>
+                <th>Customer</th>
+                <th>Items</th>
+                <th>Total</th>
+                <th>Payment</th>
+                <th>Cashier</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${filteredSales.map(sale => `
+                <tr>
+                    <td>${new Date(sale.date).toLocaleDateString()}</td>
+                    <td>${sale.invoiceNumber}</td>
+                    <td>${sale.customer.name}</td>
+                    <td>${sale.items.reduce((sum, item) => sum + item.quantity, 0)} items</td>
+                    <td>${formatGhanaCedis(sale.total)}</td>
+                    <td>${formatGhanaCedis(sale.payment)}</td>
+                    <td>${sale.cashier}</td>
+                </tr>
+            `).join('')}
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="4"><strong>Totals:</strong></td>
+                <td><strong>${formatGhanaCedis(summary.totalRevenue)}</strong></td>
+                <td colspan="2"></td>
+            </tr>
+        </tfoot>
+    `;
+}
+
+// Add these event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    const reportType = document.getElementById('reportType');
+    const startDate = document.getElementById('startDate');
+    const endDate = document.getElementById('endDate');
+
+    if (reportType && startDate && endDate) {
+        reportType.addEventListener('change', function() {
+            setDefaultDates();
+            generateReport();
+        });
+
+        startDate.addEventListener('change', generateReport);
+        endDate.addEventListener('change', generateReport);
+
+        // Initialize reports
+        initializeReports();
+    }
+});
+
+// Function to print report
+function printReport() {
+    const printWindow = window.open('', '', 'height=600,width=800');
+    printWindow.document.write('<html><head><title>Sales Report</title>');
+    
+    // Add styles for printing
+    printWindow.document.write(`
+        <style>
+            body { font-family: Arial, sans-serif; }
+            table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f5f5f5; }
+            .report-header { text-align: center; margin-bottom: 20px; }
+            .summary-section { margin-bottom: 30px; }
+            .summary-item { margin: 10px 0; }
+        </style>
+    `);
+    
+    printWindow.document.write('</head><body>');
+    
+    // Add report header
+    printWindow.document.write(`
+        <div class="report-header">
+            <h1>Sales Report</h1>
+            <p>Period: ${document.getElementById('startDate').value} to ${document.getElementById('endDate').value}</p>
+        </div>
+        <div class="summary-section">
+            <h2>Summary</h2>
+            <div class="summary-item">Total Sales: ${document.getElementById('totalSales').textContent}</div>
+            <div class="summary-item">Total Revenue: ${document.getElementById('totalRevenue').textContent}</div>
+            <div class="summary-item">Total Items Sold: ${document.getElementById('totalItems').textContent}</div>
+            <div class="summary-item">Average Sale: ${document.getElementById('averageSale').textContent}</div>
+        </div>
+    `);
+    
+    // Add the report table
+    printWindow.document.write(document.getElementById('reportTable').outerHTML);
+    
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+    printWindow.print();
+}

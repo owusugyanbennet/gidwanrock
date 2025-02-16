@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GIDWANROCK ENTERPRISE - Accounting</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Company Header -->
+    <header class="company-header">
+        <div class="company-branding">
+            <div class="logo-section">
+                <img src="images/loganb.png" alt="Company Logo" class="company-logo">
+                <div class="company-info">
+                    <h1 class="company-name">GIDWANROCK ENTERPRISE</h1>
+                    <p class="company-slogan">Pslam 23 "Nyame ne hene"</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="dashboard" id="accountingDashboard">
+        <div class="dashboard-header">
+            <h2>Accounting Dashboard</h2>
+            <span class="user-info" id="accountUserInfo">Welcome, <span id="accountUsername"></span></span>
+        </div>
+        
+        <nav>
+            <button onclick="showAccountSection('dailyAccounts')">Daily Accounts</button>
+            <button onclick="showAccountSection('expenses')">Expenses</button>
+            <button onclick="showAccountSection('revenue')">Revenue</button>
+            <button onclick="showAccountSection('reports')">Financial Reports</button>
+            <button onclick="logout()">Logout</button>
+        </nav>
+
+        <!-- Daily Accounts Section -->
+        <div id="dailyAccounts" class="section">
+            <h3>Daily Accounts</h3>
+            <div class="daily-summary">
+                <div class="summary-card">
+                    <h4>Today's Sales</h4>
+                    <p id="todaySales">GH₵ 0.00</p>
+                </div>
+                <div class="summary-card">
+                    <h4>Today's Expenses</h4>
+                    <p id="todayExpenses">GH₵ 0.00</p>
+                </div>
+                <div class="summary-card">
+                    <h4>Net Income</h4>
+                    <p id="todayNet">GH₵ 0.00</p>
+                </div>
+            </div>
+            
+            <div class="transactions-list">
+                <h4>Today's Transactions</h4>
+                <table id="transactionsTable">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Type</th>
+                            <th>Description</th>
+                            <th>Amount</th>
+                            <th>Balance</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transactionsList"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Expenses Section -->
+        <div id="expenses" class="section">
+            <h3>Expense Management</h3>
+            <div class="expense-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="expenseAmount">Amount (GH₵)*</label>
+                        <input type="number" id="expenseAmount" required min="0" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label for="expenseCategory">Category*</label>
+                        <select id="expenseCategory" required>
+                            <option value="">Select Category</option>
+                            <option value="utilities">Utilities</option>
+                            <option value="rent">Rent</option>
+                            <option value="supplies">Supplies</option>
+                            <option value="salaries">Salaries</option>
+                            <option value="maintenance">Maintenance</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="expenseDescription">Description*</label>
+                    <input type="text" id="expenseDescription" required>
+                </div>
+                <button onclick="addExpense()" class="btn-primary">Add Expense</button>
+            </div>
+
+            <div class="expense-list">
+                <h4>Recent Expenses</h4>
+                <table id="expensesTable">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Category</th>
+                            <th>Description</th>
+                            <th>Amount</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="expensesList"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Revenue Section -->
+        <div id="revenue" class="section">
+            <h3>Revenue Tracking</h3>
+            <div class="revenue-summary">
+                <div class="summary-card">
+                    <h4>Daily Revenue</h4>
+                    <p id="dailyRevenue">GH₵ 0.00</p>
+                </div>
+                <div class="summary-card">
+                    <h4>Weekly Revenue</h4>
+                    <p id="weeklyRevenue">GH₵ 0.00</p>
+                </div>
+                <div class="summary-card">
+                    <h4>Monthly Revenue</h4>
+                    <p id="monthlyRevenue">GH₵ 0.00</p>
+                </div>
+            </div>
+            
+            <div class="revenue-chart">
+                <canvas id="revenueChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Financial Reports Section -->
+        <div id="reports" class="section">
+            <h3>Financial Reports</h3>
+            <div class="report-controls">
+                <div class="date-filters">
+                    <select id="reportType" onchange="generateFinancialReport()">
+                        <option value="daily">Daily Report</option>
+                        <option value="weekly">Weekly Report</option>
+                        <option value="monthly">Monthly Report</option>
+                    </select>
+                    <input type="date" id="reportStartDate">
+                    <input type="date" id="reportEndDate">
+                </div>
+                <div class="report-actions">
+                    <button onclick="exportFinancialReport()" class="export-btn">Export Report</button>
+                    <button onclick="printFinancialReport()" class="print-btn">Print Report</button>
+                </div>
+            </div>
+
+            <div class="financial-summary">
+                <div class="summary-card">
+                    <h4>Total Revenue</h4>
+                    <p id="reportRevenue">GH₵ 0.00</p>
+                </div>
+                <div class="summary-card">
+                    <h4>Total Expenses</h4>
+                    <p id="reportExpenses">GH₵ 0.00</p>
+                </div>
+                <div class="summary-card">
+                    <h4>Net Profit</h4>
+                    <p id="reportProfit">GH₵ 0.00</p>
+                </div>
+                <div class="summary-card">
+                    <h4>Profit Margin</h4>
+                    <p id="reportMargin">0%</p>
+                </div>
+            </div>
+
+            <div class="report-details">
+                <table id="financialReportTable">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Category</th>
+                            <th>Revenue</th>
+                            <th>Expenses</th>
+                            <th>Profit/Loss</th>
+                        </tr>
+                    </thead>
+                    <tbody id="financialReportData"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="accounting.js"></script>
+</body>
+</html> 

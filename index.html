@@ -20,7 +20,6 @@
                     <p class="company-slogan">Pslam 23 "Nyame ne hene"</p>
                 </div>
             </div>
-           
     </header>
 
     <!-- Update login container with company branding -->
@@ -100,8 +99,8 @@
                         <label for="categoryName">Category Name</label>
                         <div class="input-group">
                             <input type="text" 
-                                   id="categoryName" 
-                                   placeholder="Enter category name">
+                                id="categoryName" 
+                                placeholder="Enter category name">
                             <button onclick="addCategory()" class="btn btn-primary">
                                 Add Category
                             </button>
@@ -123,23 +122,21 @@
             
             <div class="report-controls">
                 <div class="date-filters">
-                    <select id="reportType" onchange="generateReport()">
+                    <select id="reportType">
                         <option value="daily">Daily Report</option>
                         <option value="weekly">Weekly Report</option>
                         <option value="monthly">Monthly Report</option>
                         <option value="yearly">Yearly Report</option>
                     </select>
-                    
-                    <input type="date" id="startDate" onchange="generateReport()">
-                    <input type="date" id="endDate" onchange="generateReport()">
+                    <input type="date" id="startDate">
+                    <input type="date" id="endDate">
                 </div>
-                
                 <div class="report-actions">
-                    <button onclick="exportReport()" class="export-btn">
-                        <i class="fas fa-download"></i> Export Report
-                    </button>
                     <button onclick="printReport()" class="print-btn">
                         <i class="fas fa-print"></i> Print Report
+                    </button>
+                    <button onclick="exportToExcel()" class="export-btn">
+                        <i class="fas fa-file-excel"></i> Export to Excel
                     </button>
                 </div>
             </div>
@@ -147,56 +144,24 @@
             <div class="report-summary">
                 <div class="summary-card">
                     <h4>Total Sales</h4>
-                    <p id="totalSales">GH₵ 0.00</p>
+                    <p id="totalSales">0</p>
                 </div>
-                <div class="summary-card">
-                    <h4>Items Sold</h4>
-                    <p id="itemsSold">0</p>
-                </div>
-                <div class="summary-card">
-                    <h4>Transactions</h4>
-                    <p id="totalTransactions">0</p>
-                </div>
-            </div>
-
-            <div class="profit-summary-cards">
                 <div class="summary-card">
                     <h4>Total Revenue</h4>
                     <p id="totalRevenue">GH₵ 0.00</p>
                 </div>
                 <div class="summary-card">
-                    <h4>Total Cost</h4>
-                    <p id="totalCost">GH₵ 0.00</p>
+                    <h4>Items Sold</h4>
+                    <p id="totalItems">0</p>
                 </div>
                 <div class="summary-card">
-                    <h4>Total Profit</h4>
-                    <p id="totalProfit">GH₵ 0.00</p>
-                </div>
-                <div class="summary-card">
-                    <h4>Profit Margin</h4>
-                    <p id="profitMarginTotal">0%</p>
+                    <h4>Average Sale</h4>
+                    <p id="averageSale">GH₵ 0.00</p>
                 </div>
             </div>
 
-            <div class="report-charts">
-                <canvas id="salesChart"></canvas>
-            </div>
-
-            <div class="report-table">
-                <table id="reportTable">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Invoice #</th>
-                            <th>Customer</th>
-                            <th>Phone</th>
-                            <th>Items</th>
-                            <th>Total</th>
-                            <th>Employee</th>
-                        </tr>
-                    </thead>
-                    <tbody id="reportData"></tbody>
-                </table>
+            <div class="report-table-container">
+                <table id="reportTable"></table>
             </div>
         </div>
 
@@ -215,7 +180,9 @@
                         <th>Product</th>
                         <th>Category</th>
                         <th>Quantity</th>
-                        <th>Price (GH₵)</th>
+                        <th>Cost(GH₵)</th>
+                        <th>Selling Price(GH₵)</th>
+                        <th>Profit%</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -231,7 +198,9 @@
                     <thead>
                         <tr>
                             <th>Username</th>
+                            <th>Full Name</th>
                             <th>Role</th>
+                            <th>Status</th>
                             <th>Last Login</th>
                             <th>Actions</th>
                         </tr>
@@ -243,21 +212,55 @@
 
         <div id="employeeManagement" class="section">
             <h3>Employee Management</h3>
-            
-            <div class="employee-controls">
-                <button onclick="openAddEmployeeModal()" class="add-employee-btn">
-                    <i class="fas fa-plus"></i> Add New Employee
-                </button>
+            <div class="employee-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="employeeUsername">Username*</label>
+                        <input type="text" id="employeeUsername" placeholder="Username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="employeePassword">Password*</label>
+                        <input type="password" id="employeePassword" placeholder="Password" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="employeeFullName">Full Name*</label>
+                        <input type="text" id="employeeFullName" placeholder="Full Name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="employeePhone">Phone Number</label>
+                        <input type="tel" id="employeePhone" placeholder="Phone Number">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="employeeRole">Role*</label>
+                        <select id="employeeRole" required>
+                            <option value="">Select Role</option>
+                            <option value="admin">Administrator</option>
+                            <option value="selling">Sales Person</option>
+                            <option value="account">Accountant</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="employeeStatus">Status</label>
+                        <select id="employeeStatus">
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                        </select>
+                    </div>
+                </div>
+                <button onclick="addEmployee()" class="btn-primary">Add Employee</button>
             </div>
 
-            <div class="employee-list-container">
+            <div class="employee-list">
+                <h4>Current Employees</h4>
                 <table id="employeeTable">
                     <thead>
                         <tr>
-                            <th>Employee ID</th>
-                            <th>Full Name</th>
                             <th>Username</th>
-                            <th>Contact</th>
+                            <th>Full Name</th>
                             <th>Role</th>
                             <th>Status</th>
                             <th>Actions</th>
@@ -277,11 +280,11 @@
                         <label for="newCategory">New Category Name</label>
                         <div class="input-group">
                             <input type="text" 
-                                   id="newCategory" 
-                                   placeholder="Enter category name"
-                                   required>
+                            id="newCategory" 
+                            placeholder="Enter category name"
+                            required>
                             <button onclick="addCategory()" class="btn btn-primary">
-                                <i class="fas fa-plus"></i> Add Category
+                            <i class="fas fa-plus"></i> Add Category
                             </button>
                         </div>
                     </div>
@@ -300,13 +303,44 @@
     <div class="dashboard" id="employeeDashboard" style="display: none;">
         <div class="dashboard-header">
             <h2>Employee Dashboard</h2>
-            <span class="user-info">Welcome, Employee</span>
+            <span class="user-info">Welcome, <span id="employeeName"></span></span>
         </div>
         <nav>
             <button onclick="showSection('sell')">New Sale</button>
+            <button onclick="showSection('inventory')">View Inventory</button>
             <button onclick="showSection('salesHistory')">Sales History</button>
             <button onclick="logout()">Logout</button>
         </nav>
+
+        <!-- Add new inventory section -->
+        <div id="inventory" class="section">
+            <h3>Product Inventory</h3>
+            <div class="inventory-controls">
+                <div class="search-filters">
+                    <input type="text" id="stockSearch" placeholder="Search products..." 
+                        onkeyup="filterStock()">
+                    <select id="filterCategory" onchange="filterStock()">
+                        <option value="">All Categories</option>
+                    </select>
+                </div>
+            </div>
+
+            <table id="stockTable">
+                <thead>
+                    <tr>
+                        <th>Image</th>
+                        <th>Product</th>
+                        <th>Category</th>
+                        <th>Quantity</th>
+                        <th>Cost(GH₵)</th>
+                        <th>Selling Price(GH₵)</th>
+                        <th>Profit%</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="stockList"></tbody>
+            </table>
+        </div>
 
         <div id="sell" class="section">
             <h3>New Sale</h3>
@@ -328,10 +362,10 @@
             <div class="shopping-cart">
                 <h4>Add Products</h4>
                 <div class="product-selection">
-                    <select id="productSelect" onchange="updateUnitPrice()">
-                        <option value="">Select a product...</option>
+                    <select id="productSelect">
+                        <option value="">Select Product</option>
                     </select>
-                    <input type="number" id="sellQuantity" min="1" value="1">
+                    <input type="number" id="quantity" value="1" min="1" step="1">
                     <button onclick="addToCart()" class="add-to-cart-btn">Add to Cart</button>
                 </div>
 
@@ -349,8 +383,34 @@
                         <tbody id="cartItems"></tbody>
                         <tfoot>
                             <tr>
-                                <td colspan="3"><strong>Total Amount:</strong></td>
+                                <td colspan="3"><strong>Subtotal:</strong></td>
                                 <td id="cartTotal">GH₵ 0.00</td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td colspan="3"><strong>Discount:</strong></td>
+                                <td>
+                                    <input type="number" id="discount" value="0" min="0" step="0.01" 
+                                    onchange="updateFinalTotal()">
+                                </td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td colspan="3"><strong>Final Total:</strong></td>
+                                <td id="finalTotal">GH₵ 0.00</td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td colspan="3"><strong>Payment Amount:</strong></td>
+                                <td>
+                                    <input type="number" id="payment" value="0" min="0" step="0.01" 
+                                        onchange="calculateChange()">
+                                </td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td colspan="3"><strong>Change:</strong></td>
+                                <td id="changeAmount">GH₵ 0.00</td>
                                 <td></td>
                             </tr>
                         </tfoot>
@@ -367,21 +427,68 @@
         <!-- Sales History Section -->
         <div id="salesHistory" class="section">
             <h3>Sales History</h3>
+            
             <div class="sales-filters">
-                <input type="date" id="salesDate" onchange="filterSales()">
-                <input type="text" id="searchCustomer" placeholder="Search customer..." onkeyup="filterSales()">
+                <div class="date-filter">
+                    <label for="salesDate">Filter by Date:</label>
+                    <input type="date" id="salesDate" 
+                        value="<?php echo date('Y-m-d'); ?>" 
+                        onchange="filterEmployeeSales()">
+                </div>
+                <div class="search-filter">
+                    <label for="searchCustomer">Search Customer:</label>
+                    <input type="text" id="searchCustomer" 
+                        placeholder="Search by customer name..." 
+                        onkeyup="filterEmployeeSales()">
+                </div>
             </div>
-            <table id="salesHistoryTable">
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Customer</th>
-                        <th>Total</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="salesHistoryData"></tbody>
-            </table>
+
+            <div class="sales-summary">
+                <div class="summary-card">
+                    <h4>Today's Sales</h4>
+                    <p id="todaySalesCount">0 Sales</p>
+                    <p id="todaySalesAmount">GH₵ 0.00</p>
+                </div>
+                <div class="summary-card">
+                    <h4>Total Items Sold</h4>
+                    <p id="todayItemsSold">0 Items</p>
+                </div>
+                <div class="summary-card">
+                    <h4>Average Sale</h4>
+                    <p id="averageSaleAmount">GH₵ 0.00</p>
+                </div>
+            </div>
+
+            <div class="sales-table">
+                <table id="salesHistoryTable">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Invoice #</th>
+                            <th>Customer</th>
+                            <th>Items</th>
+                            <th>Total</th>
+                            <th>Payment</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="salesHistoryData"></tbody>
+                </table>
+            </div>
+
+            <!-- Sale Details Modal -->
+            <div id="saleDetailsModal" class="modal">
+                <div class="modal-content">
+                    <span class="close">&times;</span>
+                    <h4>Sale Details</h4>
+                    <div id="saleDetailsContent"></div>
+                    <div class="modal-actions">
+                        <button onclick="printReceipt(currentSaleDetails)" class="btn-primary">
+                            Print Receipt
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -435,12 +542,12 @@
                 <div class="form-group">
                     <label>New Password</label>
                     <input type="password" id="newPassword" required 
-                           minlength="6" placeholder="Enter new password">
+                        minlength="6" placeholder="Enter new password">
                 </div>
                 <div class="form-group">
                     <label>Confirm Password</label>
                     <input type="password" id="confirmPassword" required 
-                           minlength="6" placeholder="Confirm new password">
+                        minlength="6" placeholder="Confirm new password">
                 </div>
                 <div class="password-requirements">
                     <p>Password must:</p>
