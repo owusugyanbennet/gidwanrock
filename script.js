@@ -1264,13 +1264,13 @@ function addToCart() {
     const price = parseFloat(selectedOption.dataset.price);
     const productName = selectedOption.dataset.name;
 
-    // Get quantity value
+    // Get quantity value and ensure it's a valid number
     let quantity = parseInt(quantityInput.value);
-
-    // Set default quantity to 1 if input is empty or invalid
-    if (quantityInput.value.trim() === '' || isNaN(quantity) || quantity < 1) {
-        quantity = 1;
-        quantityInput.value = '1';
+    
+    // Validate quantity
+    if (!quantity || quantity < 1) {
+        alert('Please enter a valid quantity');
+        return;
     }
 
     // Check stock availability
@@ -1279,7 +1279,7 @@ function addToCart() {
         return;
     }
 
-    // Check if item already in cart
+    // Add to cart with proper quantity tracking
     const existingItem = currentCart.find(item => item.productId === productId);
     if (existingItem) {
         const newTotal = existingItem.quantity + quantity;
@@ -1288,24 +1288,31 @@ function addToCart() {
             return;
         }
         existingItem.quantity = newTotal;
+        existingItem.total = existingItem.quantity * existingItem.price;
+        existingItem.itemCount = existingItem.quantity; // Track item count
     } else {
         currentCart.push({
             productId,
             productName: productName,
             quantity: quantity,
             price: price,
-            total: quantity * price
+            total: quantity * price,
+            itemCount: quantity, // Track item count
+            available: available // Track available stock
         });
     }
 
     // Update cart display
     updateCartDisplay();
     
-    // Reset only the product selection
+    // Show success message with quantity
+    showCartUpdateMessage(quantity, productName);
+    
+    // Reset only the product selection, keep the quantity
     productSelect.value = '';
 }
 
-// Function to update cart display
+// Function to update cart display with detailed quantities
 function updateCartDisplay() {
     const cartItems = document.getElementById('cartItems');
     const cartTotal = document.getElementById('cartTotal');
@@ -1313,15 +1320,23 @@ function updateCartDisplay() {
 
     cartItems.innerHTML = '';
     let total = 0;
+    let totalItems = 0;
 
     currentCart.forEach((item, index) => {
         const itemTotal = item.quantity * item.price;
         total += itemTotal;
+        totalItems += item.quantity;
 
         cartItems.innerHTML += `
             <tr>
                 <td>${item.productName}</td>
-                <td>${item.quantity}</td>
+                <td>
+                    <div class="quantity-control">
+                        <button onclick="updateQuantity(${index}, -1)" class="qty-btn">-</button>
+                        <span>${item.quantity}</span>
+                        <button onclick="updateQuantity(${index}, 1)" class="qty-btn">+</button>
+                    </div>
+                </td>
                 <td>${formatGhanaCedis(item.price)}</td>
                 <td>${formatGhanaCedis(itemTotal)}</td>
                 <td>
@@ -1335,11 +1350,56 @@ function updateCartDisplay() {
 
     cartTotal.textContent = formatGhanaCedis(total);
     
-    // Update final total if it exists
-    const finalTotalElement = document.getElementById('finalTotal');
-    if (finalTotalElement) {
-        updateFinalTotal();
+    // Update total items count
+    const totalItemsDisplay = document.getElementById('totalItems');
+    if (totalItemsDisplay) {
+        totalItemsDisplay.textContent = `Total Items: ${totalItems}`;
     }
+    
+    // Update final total and payment
+    updateFinalTotal();
+}
+
+// Function to update quantity from cart
+function updateQuantity(index, change) {
+    const item = currentCart[index];
+    const newQuantity = item.quantity + change;
+    
+    // Validate new quantity
+    if (newQuantity < 1) {
+        if (confirm('Remove item from cart?')) {
+            removeFromCart(index);
+        }
+        return;
+    }
+    
+    // Check stock availability
+    if (newQuantity > item.available) {
+        alert(`Only ${item.available} items available in stock`);
+        return;
+    }
+    
+    // Update quantity and total
+    item.quantity = newQuantity;
+    item.total = item.quantity * item.price;
+    
+    // Update display
+    updateCartDisplay();
+}
+
+// Function to show cart update message
+function showCartUpdateMessage(quantity, productName) {
+    const message = `Added ${quantity} x ${productName} to cart`;
+    // You can replace this with a more sophisticated notification system
+    const notification = document.createElement('div');
+    notification.className = 'cart-notification';
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    
+    // Remove notification after 2 seconds
+    setTimeout(() => {
+        notification.remove();
+    }, 2000);
 }
 
 // Function to update final total
@@ -1350,9 +1410,34 @@ function updateFinalTotal() {
     
     document.getElementById('finalTotal').textContent = formatGhanaCedis(finalTotal);
     
-    // Reset payment and change when total changes
-    document.getElementById('payment').value = '';
-    document.getElementById('changeAmount').textContent = formatGhanaCedis(0);
+    // Auto-update payment amount to match final total
+    const paymentInput = document.getElementById('payment');
+    paymentInput.value = finalTotal.toFixed(2);
+    
+    // Calculate change
+    calculateChange();
+}
+
+// Function to calculate change
+function calculateChange() {
+    const finalTotal = calculateTotal() - (parseFloat(document.getElementById('discount').value) || 0);
+    const payment = parseFloat(document.getElementById('payment').value) || 0;
+    const change = payment - finalTotal;
+    
+    document.getElementById('changeAmount').textContent = formatGhanaCedis(Math.max(0, change));
+    
+    // Highlight payment field if insufficient
+    const paymentInput = document.getElementById('payment');
+    if (payment < finalTotal) {
+        paymentInput.classList.add('invalid-payment');
+    } else {
+        paymentInput.classList.remove('invalid-payment');
+    }
+}
+
+// Helper function to calculate total
+function calculateTotal() {
+    return currentCart.reduce((sum, item) => sum + (item.quantity * item.price), 0);
 }
 
 // Function to remove item from cart
@@ -1490,11 +1575,6 @@ function completeSale() {
         console.error('Error completing sale:', error);
         alert(`Error completing sale: ${error.message}`);
     }
-}
-
-// Helper function to calculate total
-function calculateTotal() {
-    return currentCart.reduce((sum, item) => sum + (item.quantity * item.price), 0);
 }
 
 // Function to generate sale ID
@@ -2614,19 +2694,252 @@ function checkAdminPermissions() {
 
 // Function to initialize employee dashboard
 function initializeEmployeeDashboard() {
-    document.getElementById('employeeName').textContent = currentUser;
+    // Clear all sections
+    clearCart();
+    clearSalesHistory();
+    clearInventoryView();
     
-    // Load necessary data
-    loadSalesData();
-    loadCategories();
+    // Set employee name
+    const employeeName = document.getElementById('employeeName');
+    if (employeeName) {
+        employeeName.textContent = users[currentUser]?.fullName || currentUser;
+    }
+
+    // Initialize empty cart
+    currentCart = [];
+    
+    // Load fresh inventory data
     loadInventory();
     
-    // Initialize sale section
-    initializeSaleSection();
-    
-    // Initialize event listeners
-    initializeEventListeners();
+    // Update product selection
+    updateProductSelection();
 }
+
+// Function to clear cart
+function clearCart() {
+    currentCart = [];
+    
+    // Clear cart display
+    const cartItems = document.getElementById('cartItems');
+    if (cartItems) {
+        cartItems.innerHTML = '';
+    }
+    
+    // Reset all form fields
+    document.getElementById('customerName').value = '';
+    document.getElementById('customerPhone').value = '';
+    document.getElementById('discount').value = '0';
+    document.getElementById('payment').value = '0';
+    document.getElementById('cartTotal').textContent = 'GH₵ 0.00';
+    document.getElementById('finalTotal').textContent = 'GH₵ 0.00';
+    document.getElementById('changeAmount').textContent = 'GH₵ 0.00';
+    
+    // Reset product selection
+    const productSelect = document.getElementById('productSelect');
+    if (productSelect) {
+        productSelect.value = '';
+    }
+    
+    // Reset quantity
+    const quantityInput = document.getElementById('quantity');
+    if (quantityInput) {
+        quantityInput.value = '1';
+    }
+}
+
+// Function to clear sales history
+function clearSalesHistory() {
+    const salesHistoryData = document.getElementById('salesHistoryData');
+    if (salesHistoryData) {
+        salesHistoryData.innerHTML = '';
+    }
+    
+    // Reset summary cards
+    document.getElementById('todaySalesCount').textContent = '0 Sales';
+    document.getElementById('todaySalesAmount').textContent = 'GH₵ 0.00';
+    document.getElementById('todayItemsSold').textContent = '0 Items';
+    document.getElementById('averageSaleAmount').textContent = 'GH₵ 0.00';
+}
+
+// Function to clear inventory view
+function clearInventoryView() {
+    const stockList = document.getElementById('stockList');
+    if (stockList) {
+        stockList.innerHTML = '';
+    }
+}
+
+// Function to load inventory
+function loadInventory() {
+    const savedInventory = localStorage.getItem('inventory');
+    if (savedInventory) {
+        inventory = JSON.parse(savedInventory);
+    } else {
+        inventory = [];
+    }
+}
+
+// Function to add item to cart
+function addToCart() {
+    const productSelect = document.getElementById('productSelect');
+    const quantityInput = document.getElementById('quantity');
+    
+    const productId = parseInt(productSelect.value);
+    
+    if (!productId) {
+        alert('Please select a product');
+        return;
+    }
+
+    const selectedOption = productSelect.options[productSelect.selectedIndex];
+    const available = parseInt(selectedOption.dataset.available);
+    const price = parseFloat(selectedOption.dataset.price);
+    const productName = selectedOption.dataset.name;
+
+    // Get quantity value and ensure it's a valid number
+    let quantity = parseInt(quantityInput.value);
+    
+    // Validate quantity
+    if (!quantity || quantity < 1) {
+        alert('Please enter a valid quantity');
+        return;
+    }
+
+    // Check stock availability
+    if (quantity > available) {
+        alert(`Only ${available} items available in stock`);
+        return;
+    }
+
+    // Add to cart with proper quantity tracking
+    const existingItem = currentCart.find(item => item.productId === productId);
+    if (existingItem) {
+        const newTotal = existingItem.quantity + quantity;
+        if (newTotal > available) {
+            alert(`Cannot add more items. Only ${available} available in stock`);
+            return;
+        }
+        existingItem.quantity = newTotal;
+        existingItem.total = existingItem.quantity * existingItem.price;
+        existingItem.itemCount = existingItem.quantity; // Track item count
+    } else {
+        currentCart.push({
+            productId,
+            productName: productName,
+            quantity: quantity,
+            price: price,
+            total: quantity * price,
+            itemCount: quantity, // Track item count
+            available: available // Track available stock
+        });
+    }
+
+    // Update cart display
+    updateCartDisplay();
+    
+    // Show success message with quantity
+    showCartUpdateMessage(quantity, productName);
+    
+    // Reset only the product selection, keep the quantity
+    productSelect.value = '';
+}
+
+// Function to update cart display with detailed quantities
+function updateCartDisplay() {
+    const cartItems = document.getElementById('cartItems');
+    const cartTotal = document.getElementById('cartTotal');
+    if (!cartItems || !cartTotal) return;
+
+    cartItems.innerHTML = '';
+    let total = 0;
+    let totalItems = 0;
+
+    currentCart.forEach((item, index) => {
+        const itemTotal = item.quantity * item.price;
+        total += itemTotal;
+        totalItems += item.quantity;
+
+        cartItems.innerHTML += `
+            <tr>
+                <td>${item.productName}</td>
+                <td>
+                    <div class="quantity-control">
+                        <button onclick="updateQuantity(${index}, -1)" class="qty-btn">-</button>
+                        <span>${item.quantity}</span>
+                        <button onclick="updateQuantity(${index}, 1)" class="qty-btn">+</button>
+                    </div>
+                </td>
+                <td>${formatGhanaCedis(item.price)}</td>
+                <td>${formatGhanaCedis(itemTotal)}</td>
+                <td>
+                    <button onclick="removeFromCart(${index})" class="delete-btn">
+                        <i class="fas fa-trash"></i> Remove
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+
+    cartTotal.textContent = formatGhanaCedis(total);
+    
+    // Update total items count
+    const totalItemsDisplay = document.getElementById('totalItems');
+    if (totalItemsDisplay) {
+        totalItemsDisplay.textContent = `Total Items: ${totalItems}`;
+    }
+    
+    // Update final total and payment
+    updateFinalTotal();
+}
+
+// Function to update quantity from cart
+function updateQuantity(index, change) {
+    const item = currentCart[index];
+    const newQuantity = item.quantity + change;
+    
+    // Validate new quantity
+    if (newQuantity < 1) {
+        if (confirm('Remove item from cart?')) {
+            removeFromCart(index);
+        }
+        return;
+    }
+    
+    // Check stock availability
+    if (newQuantity > item.available) {
+        alert(`Only ${item.available} items available in stock`);
+        return;
+    }
+    
+    // Update quantity and total
+    item.quantity = newQuantity;
+    item.total = item.quantity * item.price;
+    
+    // Update display
+    updateCartDisplay();
+}
+
+// Function to show cart update message
+function showCartUpdateMessage(quantity, productName) {
+    const message = `Added ${quantity} x ${productName} to cart`;
+    // You can replace this with a more sophisticated notification system
+    const notification = document.createElement('div');
+    notification.className = 'cart-notification';
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    
+    // Remove notification after 2 seconds
+    setTimeout(() => {
+        notification.remove();
+    }, 2000);
+}
+
+// Add this to your initialization code
+document.addEventListener('DOMContentLoaded', function() {
+    if (document.getElementById('employeeDashboard')) {
+        initializeEmployeeDashboard();
+    }
+});
 
 // Function to initialize event listeners
 function initializeEventListeners() {
@@ -3112,23 +3425,6 @@ function updateProductSelection() {
             </option>
         `;
     });
-}
-
-// Function to calculate change
-function calculateChange() {
-    const finalTotal = calculateTotal() - (parseFloat(document.getElementById('discount').value) || 0);
-    const payment = parseFloat(document.getElementById('payment').value) || 0;
-    const change = payment - finalTotal;
-    
-    document.getElementById('changeAmount').textContent = formatGhanaCedis(Math.max(0, change));
-    
-    // Highlight payment field if insufficient
-    const paymentInput = document.getElementById('payment');
-    if (payment < finalTotal) {
-        paymentInput.classList.add('invalid-payment');
-    } else {
-        paymentInput.classList.remove('invalid-payment');
-    }
 }
 
 // Function to initialize reports

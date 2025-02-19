@@ -1915,4 +1915,288 @@ tr.stock-low-stock {
     border: 1px solid #ddd;
     border-radius: 4px;
     font-size: 14px;
+}
+
+/* Responsive Design Styles */
+@media screen and (max-width: 768px) {
+    /* Dashboard Layout */
+    .dashboard {
+        padding: 10px;
+    }
+
+    .dashboard nav {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .dashboard nav button {
+        width: 100%;
+    }
+
+    /* Forms */
+    .form-row {
+        flex-direction: column;
+    }
+
+    .form-group {
+        width: 100%;
+    }
+
+    /* Tables */
+    table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+
+    .action-buttons {
+        flex-wrap: wrap;
+        gap: 5px;
+    }
+
+    .btn-sm {
+        padding: 6px 8px;
+        font-size: 12px;
+    }
+
+    /* Report Controls */
+    .report-controls {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .date-filters {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .date-filters select,
+    .date-filters input {
+        width: 100%;
+    }
+
+    .report-actions {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .report-actions button {
+        width: 100%;
+    }
+
+    /* Report Summary */
+    .report-summary {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    /* Shopping Cart */
+    .product-selection {
+        flex-direction: column;
+    }
+
+    .product-selection select,
+    .product-selection input,
+    .product-selection button {
+        width: 100%;
+        max-width: none;
+    }
+
+    /* Modal */
+    .modal-content {
+        width: 95%;
+        margin: 20px auto;
+        padding: 15px;
+    }
+
+    /* User Management */
+    .user-management-container {
+        padding: 10px;
+    }
+
+    /* Category Management */
+    .category-form .input-group {
+        flex-direction: column;
+    }
+
+    .category-form button {
+        width: 100%;
+        margin-top: 10px;
+    }
+
+    /* Stock Management */
+    .inventory-controls {
+        flex-direction: column;
+    }
+
+    .search-filters {
+        flex-direction: column;
+    }
+
+    .search-filters input,
+    .search-filters select {
+        width: 100%;
+        min-width: unset;
+    }
+
+    /* Sales Section */
+    .customer-info-form {
+        padding: 10px;
+    }
+
+    .shopping-cart {
+        padding: 10px;
+    }
+
+    #cartTable {
+        font-size: 14px;
+    }
+
+    #cartTable input[type="number"] {
+        width: 60px;
+    }
+
+    /* Hide less important columns on mobile */
+    @media screen and (max-width: 480px) {
+        .hide-on-mobile {
+            display: none;
+        }
+
+        #cartTable th:nth-child(3),
+        #cartTable td:nth-child(3) {
+            display: none;
+        }
+
+        .status-badge,
+        .role-badge {
+            padding: 2px 4px;
+            font-size: 10px;
+        }
+    }
+}
+
+/* Additional Mobile Optimizations */
+@media screen and (max-width: 480px) {
+    /* Header */
+    .dashboard-header {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .user-info {
+        margin-top: 10px;
+    }
+
+    /* Tables */
+    td, th {
+        padding: 8px 4px;
+        font-size: 12px;
+    }
+
+    /* Buttons */
+    .btn-primary,
+    .btn-danger,
+    .btn-warning {
+        padding: 6px 10px;
+        font-size: 12px;
+    }
+
+    /* Forms */
+    input, select {
+        font-size: 14px;
+        padding: 8px;
+    }
+
+    /* Modal */
+    .modal-content {
+        padding: 10px;
+    }
+
+    .close-modal {
+        right: 10px;
+        top: 10px;
+    }
+
+    /* Summary Cards */
+    .summary-card {
+        padding: 10px;
+    }
+
+    .summary-card h4 {
+        font-size: 14px;
+    }
+
+    .summary-card p {
+        font-size: 16px;
+    }
+}
+
+/* Print Styles */
+@media print {
+    .no-print {
+        display: none;
+    }
+
+    .dashboard nav,
+    .report-controls {
+        display: none;
+    }
+
+    table {
+        width: 100% !important;
+        display: table;
+    }
+
+    body {
+        padding: 0;
+        margin: 0;
+    }
+
+    .report-summary {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+        page-break-inside: avoid;
+    }
+}
+
+.quantity-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.qty-btn {
+    padding: 2px 8px;
+    border: 1px solid #ddd;
+    background: #f8f9fa;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.qty-btn:hover {
+    background: #e9ecef;
+}
+
+.cart-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #28a745;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 4px;
+    animation: slideIn 0.3s ease-out;
+    z-index: 1000;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
 } 
